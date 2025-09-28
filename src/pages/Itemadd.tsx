@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -12,6 +13,7 @@ declare global {
       disconnect?: () => Promise<void>;
       onDisconnect?: (cb: () => void) => void;
       onAccountChange?: (cb: (account: any) => void) => void;
+      signAndSubmitTransaction?: (transaction: any) => Promise<any>;
     };
   }
 }
@@ -20,16 +22,27 @@ interface ItemForm {
   productId: string;
   orderId: string;
   brand: string;
-  pickupDate: string;
   ownerWalletAddress: string;
 }
+
+interface TransactionResponse {
+  hash: string;
+  success?: boolean;
+}
+
+// Environment variables
+const MODULE_ADDRESS = import.meta.env.VITE_MODULE_ADDRESS!;
+const NETWORK = import.meta.env.VITE_APP_NETWORK || "Testnet";
+
+
+// Storage key for transaction hashes only
+const TRANSACTION_HASHES_STORAGE_KEY = "blockverify_transaction_hashes";
 
 export default function ItemAddWithPetraClean() {
   const [form, setForm] = useState<ItemForm>({
     productId: "",
     orderId: "",
     brand: "",
-    pickupDate: "",
     ownerWalletAddress: "",
   });
 
@@ -39,8 +52,48 @@ export default function ItemAddWithPetraClean() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showWalletOptions, setShowWalletOptions] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [explorerUrl, setExplorerUrl] = useState<string>("");
 
   const checkProvider = useCallback(() => !!window?.aptos, []);
+  const navigate = useNavigate();
+
+  // Set explorer URL based on network
+  useEffect(() => {
+    const baseUrl = NETWORK.toLowerCase() === "mainnet" 
+      ? "https://explorer.aptoslabs.com"
+      : "https://explorer.aptoslabs.com";
+    setExplorerUrl(`${baseUrl}/txn/`);
+  }, []);
+
+  // Store only transaction hash in localStorage
+  const storeTransactionHash = useCallback((hash: string, walletAddress: string) => {
+    try {
+      const storedHashes = JSON.parse(
+        localStorage.getItem(TRANSACTION_HASHES_STORAGE_KEY) || "{}"
+      );
+      
+      if (!storedHashes[walletAddress]) {
+        storedHashes[walletAddress] = [];
+      }
+      
+      // Add new hash to the beginning of the array (avoid duplicates)
+      if (!storedHashes[walletAddress].includes(hash)) {
+        storedHashes[walletAddress] = [hash, ...storedHashes[walletAddress]];
+        
+        // Keep only last 50 transactions per wallet to prevent localStorage overflow
+        storedHashes[walletAddress] = storedHashes[walletAddress].slice(0, 50);
+        
+        localStorage.setItem(TRANSACTION_HASHES_STORAGE_KEY, JSON.stringify(storedHashes));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error storing transaction hash:", error);
+      return false;
+    }
+  }, []);
 
   const refreshConnectionState = useCallback(async () => {
     if (!checkProvider()) {
@@ -55,6 +108,11 @@ export default function ItemAddWithPetraClean() {
         const addr = acct?.address ?? null;
         setConnected(true);
         setAddress(addr);
+        
+        // Pre-fill owner wallet address with connected wallet
+        if (addr) {
+          setForm(prev => ({ ...prev, ownerWalletAddress: addr }));
+        }
       } else {
         setConnected(false);
         setAddress(null);
@@ -72,12 +130,14 @@ export default function ItemAddWithPetraClean() {
     const onDisconnect = () => {
       setConnected(false);
       setAddress(null);
+      setForm(prev => ({ ...prev, ownerWalletAddress: "" }));
     };
 
     const onAccountChange = (newAccount: any) => {
       if (newAccount?.address) {
         setConnected(true);
         setAddress(newAccount.address);
+        setForm(prev => ({ ...prev, ownerWalletAddress: newAccount.address }));
       } else {
         onDisconnect();
       }
@@ -94,9 +154,7 @@ export default function ItemAddWithPetraClean() {
   const connectWallet = async () => {
     setErrorMsg(null);
     if (!checkProvider()) {
-      setErrorMsg(
-        "Petra wallet not installed. Install from https://petra.app/"
-      );
+      setErrorMsg("Petra wallet not installed. Install from https://petra.app/");
       return;
     }
     setConnecting(true);
@@ -105,6 +163,11 @@ export default function ItemAddWithPetraClean() {
       const addr = resp?.address ?? null;
       setConnected(true);
       setAddress(addr);
+      
+      if (addr) {
+        setForm(prev => ({ ...prev, ownerWalletAddress: addr }));
+      }
+      
       setShowWalletOptions(false);
     } catch (err: any) {
       console.error("connectWallet error:", err);
@@ -133,6 +196,7 @@ export default function ItemAddWithPetraClean() {
     setConnected(false);
     setAddress(null);
     setShowWalletOptions(false);
+    setForm(prev => ({ ...prev, ownerWalletAddress: "" }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,52 +224,139 @@ export default function ItemAddWithPetraClean() {
     if (!form.productId.trim()) return "Product ID is required";
     if (!form.orderId.trim()) return "Order ID is required";
     if (!form.brand.trim()) return "Brand is required";
-    if (!form.pickupDate.trim()) return "Pickup date is required";
-    if (!form.ownerWalletAddress.trim())
-      return "Owner wallet address is required";
+    if (!form.ownerWalletAddress.trim()) return "Owner wallet address is required";
+    
+    if (!form.ownerWalletAddress.startsWith('0x') || form.ownerWalletAddress.length !== 66) {
+      return "Invalid wallet address format";
+    }
+    
     return null;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const submitToBlockchain = async (formData: ItemForm): Promise<TransactionResponse> => {
+    if (!window.aptos?.signAndSubmitTransaction) {
+      throw new Error("Wallet does not support transaction signing");
+    }
+
+    const transaction = {
+      arguments: [
+        formData.productId,
+        formData.orderId,
+        formData.brand,
+        formData.ownerWalletAddress
+      ],
+      function: `${MODULE_ADDRESS}::product_return::add_item`,
+      type: "entry_function_payload",
+      type_arguments: []
+    };
+
+    console.log("Submitting transaction:", transaction);
+
+    try {
+      const response = await window.aptos.signAndSubmitTransaction(transaction);
+      return { hash: response.hash, success: true };
+    } catch (error: any) {
+      console.error("Transaction error:", error);
+      throw new Error(error.message || "Transaction failed");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     const error = validateForm();
     if (error) {
       setErrorMsg(error);
       return;
     }
+
+    if (!connected) {
+      setErrorMsg("Please connect your wallet first");
+      return;
+    }
+
     setErrorMsg(null);
-    alert("Blockchain Item generated successfully!");
+    setSubmitting(true);
+    setTransactionHash(null);
+
+    try {
+      const result = await submitToBlockchain(form);
+      setTransactionHash(result.hash);
+      
+      // Store only the transaction hash with wallet address
+      if (address) {
+        storeTransactionHash(result.hash, address);
+        console.log("Transaction hash stored:", result.hash);
+      }
+      
+      alert(`Item successfully added to blockchain!\nTransaction Hash: ${result.hash}`);
+      
+      setForm({
+        productId: "",
+        orderId: "",
+        brand: "",
+        ownerWalletAddress: address || "",
+      });
+      
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      setErrorMsg(
+        err?.message?.toLowerCase()?.includes("user rejected")
+          ? "Transaction rejected by user."
+          : err?.message?.includes("INSUFFICIENT_BALANCE")
+          ? "Insufficient balance for transaction fees."
+          : "Failed to submit transaction. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const viewOnExplorer = () => {
+    if (transactionHash && explorerUrl) {
+      window.open(`${explorerUrl}${transactionHash}?network=${NETWORK.toLowerCase()}`, '_blank');
+    }
+  };
+
+  const navigateToMyOrders = () => {
+    navigate("/myorders");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Navigation */}
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">B</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">
-                BlockVerify
+              <span className="text-xl font-bold text-gray-900">BlockVerify</span>
+            </div>
+
+            <div className="hidden md:flex items-center space-x-2">
+              <span className="text-sm text-gray-500">Network:</span>
+              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                {NETWORK}
               </span>
             </div>
 
-            {/* Navigation Links */}
             <div className="hidden md:flex space-x-8">
               {["Home", "Admin", "MyOrders", "Learn"].map((item) => (
                 <button
+                  onClick={() => {
+                    if (item === "Home") navigate("/");
+                    else if (item === "Admin") navigate("/itemadd");
+                    else if (item === "MyOrders") navigate("/myorders");
+                  }}
                   key={item}
-                  className="text-gray-600 hover:text-blue-600 font-medium transition-colors"
+                  className="text-gray-600 hover:text-blue-600 font-medium transition-colors cursor-pointer"
                 >
                   {item}
                 </button>
               ))}
             </div>
 
-            {/* Wallet Connection */}
             <div className="flex items-center space-x-4">
               {!checkProvider() ? (
                 <a
@@ -226,7 +377,6 @@ export default function ItemAddWithPetraClean() {
                     <span>{maskAddress(address)}</span>
                   </button>
 
-                  {/* Wallet Options Dropdown */}
                   <AnimatePresence>
                     {showWalletOptions && (
                       <motion.div
@@ -236,18 +386,23 @@ export default function ItemAddWithPetraClean() {
                         className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
                       >
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm text-gray-600">
-                            Connected Wallet
-                          </p>
+                          <p className="text-sm text-gray-600">Connected Wallet</p>
                           <p className="text-sm font-mono text-gray-900 truncate">
                             {maskAddress(address)}
                           </p>
+                          <p className="text-xs text-gray-500 mt-1">Network: {NETWORK}</p>
                         </div>
                         <button
                           onClick={copyAddress}
                           className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                           {copied ? "Copied!" : "Copy Address"}
+                        </button>
+                        <button
+                          onClick={navigateToMyOrders}
+                          className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          View My Orders
                         </button>
                         <button
                           onClick={disconnectWallet}
@@ -273,31 +428,58 @@ export default function ItemAddWithPetraClean() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Message */}
+        {transactionHash && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-800 font-medium">Transaction Successful!</p>
+                <p className="text-green-600 text-sm mt-1">
+                  Item successfully added to blockchain on {NETWORK}
+                </p>
+                <p className="font-mono text-xs mt-2 break-all text-green-700">
+                  Hash: {transactionHash}
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={viewOnExplorer}
+                  className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
+                >
+                  View Explorer
+                </button>
+                <button
+                  onClick={navigateToMyOrders}
+                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
+                >
+                  View My Orders
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {errorMsg && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             {errorMsg}
           </div>
         )}
 
-        {/* Form Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
-          {/* Form Header */}
           <div className="text-center mb-8">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
               Add Item to Trust-Chain
             </h1>
             <p className="text-gray-600">
-              Register your product on the blockchain for authenticity tracking
+              Register your product on the {NETWORK} blockchain for authenticity tracking
             </p>
+            <div className="mt-2 text-sm text-gray-500">
+              Module: {maskAddress(MODULE_ADDRESS)}
+            </div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Product ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Product ID *
@@ -308,7 +490,7 @@ export default function ItemAddWithPetraClean() {
                   value={form.productId}
                   onChange={handleChange}
                   required
-                  disabled={!connected} // 🔒 disable if wallet not connected
+                  disabled={!connected || submitting}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
        focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
        disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -316,7 +498,6 @@ export default function ItemAddWithPetraClean() {
                 />
               </div>
 
-              {/* Order ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Order ID *
@@ -327,7 +508,7 @@ export default function ItemAddWithPetraClean() {
                   value={form.orderId}
                   onChange={handleChange}
                   required
-                  disabled={!connected} // 🔒
+                  disabled={!connected || submitting}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
        focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
        disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -335,8 +516,7 @@ export default function ItemAddWithPetraClean() {
                 />
               </div>
 
-              {/* Brand */}
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Brand *
                 </label>
@@ -346,7 +526,7 @@ export default function ItemAddWithPetraClean() {
                   value={form.brand}
                   onChange={handleChange}
                   required
-                  disabled={!connected} // 🔒
+                  disabled={!connected || submitting}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
        focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
        disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -354,25 +534,6 @@ export default function ItemAddWithPetraClean() {
                 />
               </div>
 
-              {/* Pickup Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup Date *
-                </label>
-                <input
-                  type="date"
-                  name="pickupDate"
-                  value={form.pickupDate}
-                  onChange={handleChange}
-                  required
-                  disabled={!connected} // 🔒
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-       focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-       disabled:bg-gray-100 disabled:cursor-not-allowed"
-                />
-              </div>
-
-              {/* Owner Wallet Address */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Owner Wallet Address *
@@ -383,24 +544,43 @@ export default function ItemAddWithPetraClean() {
                   value={form.ownerWalletAddress}
                   onChange={handleChange}
                   required
-                  disabled={!connected} // 🔒
+                  disabled={!connected || submitting}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
        focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
        disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder="Enter wallet address"
+                  placeholder="Enter wallet address (0x...)"
                 />
+                {connected && address && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Connected wallet: {maskAddress(address)}
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, ownerWalletAddress: address }))}
+                      className="ml-2 text-blue-600 hover:text-blue-800 text-xs"
+                    >
+                      Use connected wallet
+                    </button>
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Submit Button */}
             <div className="flex justify-center pt-4">
               <button
                 type="submit"
-                disabled={!connected}
+                disabled={!connected || submitting}
                 className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium 
-             hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+             hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
+             flex items-center space-x-2 min-w-[200px] justify-center"
               >
-                Add BlockChain
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Processing Transaction...</span>
+                  </>
+                ) : (
+                  <span className="cursor-pointer">Add to Blockchain</span>
+                )}
               </button>
             </div>
           </form>

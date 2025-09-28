@@ -1,9 +1,10 @@
 [package]
-name = "return"
+name = "Aptos-name"
 version = "1.0.0"
 authors = []
 
 [addresses]
+product = "0xfa1c12cc2e127047b02bc951d71d376cf25b9db220d213bfa972f45c0c55de38"
 
 [dev-addresses]
 
