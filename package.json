@@ -14,6 +14,7 @@
     "@aptos-labs/wallet-adapter-ant-design": "^2.1.0",
     "@aptos-labs/wallet-adapter-react": "^7.1.0",
     "@heroicons/react": "^2.2.0",
+    "@react-icons/all-files": "^4.1.0",
     "@tailwindcss/vite": "^4.1.13",
     "button": "^1.1.1",
     "buttons": "^0.1.2",
@@ -23,6 +24,7 @@
     "petra-plugin-wallet-adapter": "^0.4.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-icons": "^5.5.0",
     "react-router-dom": "^7.9.3",
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.13"

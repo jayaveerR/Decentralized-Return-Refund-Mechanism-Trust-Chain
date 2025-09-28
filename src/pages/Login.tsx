@@ -38,7 +38,7 @@ const Login = () => {
       localStorage.setItem("walletConnected", "true");
       
       // Navigate to home page
-      navigate("/Home");
+      navigate("/home");
     } catch (error) {
       console.error("Wallet connection failed:", error);
       alert("Wallet connection failed. Please try again.");

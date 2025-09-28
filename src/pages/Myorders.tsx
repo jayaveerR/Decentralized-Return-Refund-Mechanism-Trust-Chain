@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Navbar from '../components/Navbar'; // Import the Navbar component
 
 const TRANSACTION_HASHES_STORAGE_KEY = "blockverify_transaction_hashes";
 
@@ -9,14 +11,14 @@ interface PetraWallet {
   disconnect: () => Promise<void>;
   isConnected: () => Promise<boolean>;
   account: () => Promise<{ address: string }>;
-  onAccountChange: (
+  onAccountChange?: (
     listener: (newAddress: { address: string }) => void
   ) => void;
 }
 
 declare global {
   interface Window {
-    apto?: PetraWallet; // Fixed: Changed from Aptos to aptos (lowercase)
+    apto?: PetraWallet;
   }
 }
 
@@ -31,25 +33,22 @@ const MyOrders: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [isPetraInstalled, setIsPetraInstalled] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
-  const [transactionHashes, setTransactionHashes] = useState<
-    TransactionHashItem[]
-  >([]);
+  const [transactionHashes, setTransactionHashes] = useState<TransactionHashItem[]>([]);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
-
-  
+  const navigate = useNavigate();
 
   useEffect(() => {
     checkPetraInstallation();
     checkConnection();
 
-    if (window.aptos) {
+    if (window.aptos && window.aptos.onAccountChange) {
       try {
-        // Fixed: Changed parameter name from newAccount to newAddress to match interface
         window.aptos.onAccountChange((newAddress: { address: string }) => {
-          if (newAddress) {
+          if (newAddress && newAddress.address) {
             setWalletAddress(newAddress.address);
             loadTransactionHashes(newAddress.address);
+            setIsConnected(true);
           } else {
             setWalletAddress("");
             setIsConnected(false);
@@ -78,7 +77,6 @@ const MyOrders: React.FC = () => {
         }
       } catch (error: any) {
         console.error("Error checking connection:", error);
-        alert(`Error checking connection: ${error.message}`);
       }
     }
   };
@@ -97,7 +95,6 @@ const MyOrders: React.FC = () => {
       loadTransactionHashes(response.address);
     } catch (error: any) {
       console.error("Failed to connect wallet:", error);
-      alert(`Failed to connect wallet: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -112,7 +109,6 @@ const MyOrders: React.FC = () => {
       setTransactionHashes([]);
     } catch (error: any) {
       console.error("Failed to disconnect wallet:", error);
-      alert(`Failed to disconnect wallet: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -215,61 +211,10 @@ const MyOrders: React.FC = () => {
   };
 
   return (
-    <>
-      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/50 py-4 px-6 sticky top-0 z-50 shadow-lg">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">B</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                BlockVerify
-              </span>
-              <span className="text-xs text-gray-500 -mt-1">
-                Transaction Hash History
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {isConnected ? (
-              <div className="flex items-center space-x-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl pl-5 pr-2 py-2 shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-semibold text-gray-700">
-                    Connected
-                  </span>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(walletAddress)}
-                  className="flex items-center space-x-2 bg-white/80 hover:bg-white px-3 py-1.5 rounded-xl transition-all duration-200 hover:shadow-sm"
-                >
-                  <span className="font-mono text-sm font-medium text-gray-800">
-                    {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                  </span>
-                </button>
-                <button
-                  onClick={disconnectWallet}
-                  disabled={loading}
-                  className="bg-red-50 hover:bg-red-100 text-red-600 rounded-xl p-2 transition-all duration-200 hover:shadow-sm disabled:opacity-50"
-                >
-                  Disconnect
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={connectWallet}
-                disabled={loading}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center space-x-2"
-              >
-                {loading ? "Connecting..." : "Connect Wallet"}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Use the imported Navbar component */}
+      <Navbar activeTab="myorders" />
+      
       <main className="max-w-6xl mx-auto p-6 min-h-screen">
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-8">
@@ -578,7 +523,7 @@ const MyOrders: React.FC = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
