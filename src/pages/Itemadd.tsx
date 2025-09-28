@@ -34,7 +34,6 @@ interface TransactionResponse {
 const MODULE_ADDRESS = import.meta.env.VITE_MODULE_ADDRESS!;
 const NETWORK = import.meta.env.VITE_APP_NETWORK || "Testnet";
 
-
 // Storage key for transaction hashes only
 const TRANSACTION_HASHES_STORAGE_KEY = "blockverify_transaction_hashes";
 
@@ -61,39 +60,49 @@ export default function ItemAddWithPetraClean() {
 
   // Set explorer URL based on network
   useEffect(() => {
-    const baseUrl = NETWORK.toLowerCase() === "mainnet" 
-      ? "https://explorer.aptoslabs.com"
-      : "https://explorer.aptoslabs.com";
+    const baseUrl =
+      NETWORK.toLowerCase() === "mainnet"
+        ? "https://explorer.aptoslabs.com"
+        : "https://explorer.aptoslabs.com";
     setExplorerUrl(`${baseUrl}/txn/`);
   }, []);
 
   // Store only transaction hash in localStorage
-  const storeTransactionHash = useCallback((hash: string, walletAddress: string) => {
-    try {
-      const storedHashes = JSON.parse(
-        localStorage.getItem(TRANSACTION_HASHES_STORAGE_KEY) || "{}"
-      );
-      
-      if (!storedHashes[walletAddress]) {
-        storedHashes[walletAddress] = [];
+  const storeTransactionHash = useCallback(
+    (hash: string, walletAddress: string) => {
+      try {
+        const storedHashes = JSON.parse(
+          localStorage.getItem(TRANSACTION_HASHES_STORAGE_KEY) || "{}"
+        );
+
+        if (!storedHashes[walletAddress]) {
+          storedHashes[walletAddress] = [];
+        }
+
+        // Add new hash to the beginning of the array (avoid duplicates)
+        if (!storedHashes[walletAddress].includes(hash)) {
+          storedHashes[walletAddress] = [hash, ...storedHashes[walletAddress]];
+
+          // Keep only last 50 transactions per wallet to prevent localStorage overflow
+          storedHashes[walletAddress] = storedHashes[walletAddress].slice(
+            0,
+            50
+          );
+
+          localStorage.setItem(
+            TRANSACTION_HASHES_STORAGE_KEY,
+            JSON.stringify(storedHashes)
+          );
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error storing transaction hash:", error);
+        return false;
       }
-      
-      // Add new hash to the beginning of the array (avoid duplicates)
-      if (!storedHashes[walletAddress].includes(hash)) {
-        storedHashes[walletAddress] = [hash, ...storedHashes[walletAddress]];
-        
-        // Keep only last 50 transactions per wallet to prevent localStorage overflow
-        storedHashes[walletAddress] = storedHashes[walletAddress].slice(0, 50);
-        
-        localStorage.setItem(TRANSACTION_HASHES_STORAGE_KEY, JSON.stringify(storedHashes));
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error storing transaction hash:", error);
-      return false;
-    }
-  }, []);
+    },
+    []
+  );
 
   const refreshConnectionState = useCallback(async () => {
     if (!checkProvider()) {
@@ -108,11 +117,7 @@ export default function ItemAddWithPetraClean() {
         const addr = acct?.address ?? null;
         setConnected(true);
         setAddress(addr);
-        
-        // Pre-fill owner wallet address with connected wallet
-        if (addr) {
-          setForm(prev => ({ ...prev, ownerWalletAddress: addr }));
-        }
+        // ❌ Removed auto-fill of ownerWalletAddress
       } else {
         setConnected(false);
         setAddress(null);
@@ -130,14 +135,17 @@ export default function ItemAddWithPetraClean() {
     const onDisconnect = () => {
       setConnected(false);
       setAddress(null);
-      setForm(prev => ({ ...prev, ownerWalletAddress: "" }));
+      setForm((prev) => ({ ...prev, ownerWalletAddress: "" }));
     };
 
     const onAccountChange = (newAccount: any) => {
       if (newAccount?.address) {
         setConnected(true);
         setAddress(newAccount.address);
-        setForm(prev => ({ ...prev, ownerWalletAddress: newAccount.address }));
+        setForm((prev) => ({
+          ...prev,
+          ownerWalletAddress: newAccount.address,
+        }));
       } else {
         onDisconnect();
       }
@@ -154,7 +162,9 @@ export default function ItemAddWithPetraClean() {
   const connectWallet = async () => {
     setErrorMsg(null);
     if (!checkProvider()) {
-      setErrorMsg("Petra wallet not installed. Install from https://petra.app/");
+      setErrorMsg(
+        "Petra wallet not installed. Install from https://petra.app/"
+      );
       return;
     }
     setConnecting(true);
@@ -163,11 +173,7 @@ export default function ItemAddWithPetraClean() {
       const addr = resp?.address ?? null;
       setConnected(true);
       setAddress(addr);
-      
-      if (addr) {
-        setForm(prev => ({ ...prev, ownerWalletAddress: addr }));
-      }
-      
+      // ❌ Removed auto-fill of ownerWalletAddress
       setShowWalletOptions(false);
     } catch (err: any) {
       console.error("connectWallet error:", err);
@@ -196,7 +202,7 @@ export default function ItemAddWithPetraClean() {
     setConnected(false);
     setAddress(null);
     setShowWalletOptions(false);
-    setForm(prev => ({ ...prev, ownerWalletAddress: "" }));
+    setForm((prev) => ({ ...prev, ownerWalletAddress: "" }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,16 +230,22 @@ export default function ItemAddWithPetraClean() {
     if (!form.productId.trim()) return "Product ID is required";
     if (!form.orderId.trim()) return "Order ID is required";
     if (!form.brand.trim()) return "Brand is required";
-    if (!form.ownerWalletAddress.trim()) return "Owner wallet address is required";
-    
-    if (!form.ownerWalletAddress.startsWith('0x') || form.ownerWalletAddress.length !== 66) {
+    if (!form.ownerWalletAddress.trim())
+      return "Owner wallet address is required";
+
+    if (
+      !form.ownerWalletAddress.startsWith("0x") ||
+      form.ownerWalletAddress.length !== 66
+    ) {
       return "Invalid wallet address format";
     }
-    
+
     return null;
   };
 
-  const submitToBlockchain = async (formData: ItemForm): Promise<TransactionResponse> => {
+  const submitToBlockchain = async (
+    formData: ItemForm
+  ): Promise<TransactionResponse> => {
     if (!window.aptos?.signAndSubmitTransaction) {
       throw new Error("Wallet does not support transaction signing");
     }
@@ -243,11 +255,11 @@ export default function ItemAddWithPetraClean() {
         formData.productId,
         formData.orderId,
         formData.brand,
-        formData.ownerWalletAddress
+        formData.ownerWalletAddress,
       ],
       function: `${MODULE_ADDRESS}::product_return::add_item`,
       type: "entry_function_payload",
-      type_arguments: []
+      type_arguments: [],
     };
 
     console.log("Submitting transaction:", transaction);
@@ -263,7 +275,7 @@ export default function ItemAddWithPetraClean() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const error = validateForm();
     if (error) {
       setErrorMsg(error);
@@ -282,22 +294,23 @@ export default function ItemAddWithPetraClean() {
     try {
       const result = await submitToBlockchain(form);
       setTransactionHash(result.hash);
-      
+
       // Store only the transaction hash with wallet address
       if (address) {
         storeTransactionHash(result.hash, address);
         console.log("Transaction hash stored:", result.hash);
       }
-      
-      alert(`Item successfully added to blockchain!\nTransaction Hash: ${result.hash}`);
-      
+
+      alert(
+        `Item successfully added to blockchain!\nTransaction Hash: ${result.hash}`
+      );
+
       setForm({
         productId: "",
         orderId: "",
         brand: "",
         ownerWalletAddress: address || "",
       });
-      
     } catch (err: any) {
       console.error("Submission error:", err);
       setErrorMsg(
@@ -314,7 +327,10 @@ export default function ItemAddWithPetraClean() {
 
   const viewOnExplorer = () => {
     if (transactionHash && explorerUrl) {
-      window.open(`${explorerUrl}${transactionHash}?network=${NETWORK.toLowerCase()}`, '_blank');
+      window.open(
+        `${explorerUrl}${transactionHash}?network=${NETWORK.toLowerCase()}`,
+        "_blank"
+      );
     }
   };
 
@@ -331,7 +347,9 @@ export default function ItemAddWithPetraClean() {
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">B</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">BlockVerify</span>
+              <span className="text-xl font-bold text-gray-900">
+                BlockVerify
+              </span>
             </div>
 
             <div className="hidden md:flex items-center space-x-2">
@@ -386,11 +404,15 @@ export default function ItemAddWithPetraClean() {
                         className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
                       >
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm text-gray-600">Connected Wallet</p>
+                          <p className="text-sm text-gray-600">
+                            Connected Wallet
+                          </p>
                           <p className="text-sm font-mono text-gray-900 truncate">
                             {maskAddress(address)}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">Network: {NETWORK}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Network: {NETWORK}
+                          </p>
                         </div>
                         <button
                           onClick={copyAddress}
@@ -433,7 +455,9 @@ export default function ItemAddWithPetraClean() {
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-800 font-medium">Transaction Successful!</p>
+                <p className="text-green-800 font-medium">
+                  Transaction Successful!
+                </p>
                 <p className="text-green-600 text-sm mt-1">
                   Item successfully added to blockchain on {NETWORK}
                 </p>
@@ -471,7 +495,8 @@ export default function ItemAddWithPetraClean() {
               Add Item to Trust-Chain
             </h1>
             <p className="text-gray-600">
-              Register your product on the {NETWORK} blockchain for authenticity tracking
+              Register your product on the {NETWORK} blockchain for authenticity
+              tracking
             </p>
             <div className="mt-2 text-sm text-gray-500">
               Module: {maskAddress(MODULE_ADDRESS)}
@@ -534,6 +559,7 @@ export default function ItemAddWithPetraClean() {
                 />
               </div>
 
+              {/* Owner Wallet Address field */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Owner Wallet Address *
@@ -550,18 +576,7 @@ export default function ItemAddWithPetraClean() {
        disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter wallet address (0x...)"
                 />
-                {connected && address && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Connected wallet: {maskAddress(address)}
-                    <button
-                      type="button"
-                      onClick={() => setForm(prev => ({ ...prev, ownerWalletAddress: address }))}
-                      className="ml-2 text-blue-600 hover:text-blue-800 text-xs"
-                    >
-                      Use connected wallet
-                    </button>
-                  </p>
-                )}
+                {/* ❌ Removed "Use connected wallet" suggestion */}
               </div>
             </div>
 
