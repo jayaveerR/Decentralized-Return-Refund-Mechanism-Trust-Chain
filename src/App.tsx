@@ -3,7 +3,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Additem from "./pages/Itemadd";
 import Myorders from "./pages/Myorders";
-import Verify from "./pages/Verify";
+import Verify from "./Verifying/Verify";
 import Qrcode from "./pages/Qrcode";
 
 
