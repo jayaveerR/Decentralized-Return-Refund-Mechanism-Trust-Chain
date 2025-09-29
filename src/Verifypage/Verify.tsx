@@ -1,24 +1,20 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MdQrCodeScanner,
-  MdClose,
   MdVerified,
   MdContentCopy,
   MdRefresh,
   MdCheckCircle,
-  MdCancel,
-  MdAssignmentReturn,
-  MdPayment,
-  MdReplay,
   MdWarning,
   MdEdit,
-  MdAccountBalanceWallet,
-  MdHome,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import jsQR from "jsqr";
+import ScanningCamera from "../components/ScanningCamera";
+import NavbarWallet from "../components/NavbarWallet";
+import ActionEligible from "../components/ActionEligible";
+import { useBlockchainService } from "../services/BlockchainService";
 
 // Types for real Aptos transaction data
 interface TransactionDetails {
@@ -53,13 +49,6 @@ interface ProductInfo {
   mismatchFields: string[];
 }
 
-// Petra Wallet types
-interface AptosWindow extends Window {
-  aptos?: any;
-}
-
-declare const window: AptosWindow;
-
 const Verify = () => {
   const navigate = useNavigate();
 
@@ -84,198 +73,17 @@ const Verify = () => {
   const [isWalletConnecting, setIsWalletConnecting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number>(0);
+  // Blockchain service
+  const { recordOnBlockchain } = useBlockchainService({
+    walletConnected,
+    walletAddress,
+    onRecordingChange: setIsRecording,
+  });
 
-  // Check if Petra Wallet is installed
-  const isPetraInstalled = () => {
-    return typeof window !== "undefined" && !!window.aptos;
-  };
-
-  // Connect to Petra Wallet
-  const connectWallet = async () => {
-    if (!isPetraInstalled()) {
-      alert(
-        "Petra Wallet is not installed. Please install it from https://petra.app/"
-      );
-      return;
-    }
-
-    try {
-      setIsWalletConnecting(true);
-      const response = await window.aptos.connect();
-      setWalletAddress(response.address);
-      setWalletConnected(true);
-      console.log("Wallet connected:", response.address);
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
-      alert("Failed to connect wallet. Please try again.");
-    } finally {
-      setIsWalletConnecting(false);
-    }
-  };
-
-  // Disconnect wallet
-  const disconnectWallet = async () => {
-    if (isPetraInstalled()) {
-      try {
-        await window.aptos.disconnect();
-        setWalletConnected(false);
-        setWalletAddress("");
-      } catch (error) {
-        console.error("Failed to disconnect wallet:", error);
-      }
-    }
-  };
-
-  // Record verification result on blockchain
-  const recordOnBlockchain = async (action: string, data: any) => {
-    if (!walletConnected) {
-      alert("Please connect your Petra Wallet first.");
-      return null;
-    }
-
-    try {
-      setIsRecording(true);
-
-      const payload = {
-        type: "entry_function_payload",
-        function: "0x1::message::set_message", // Replace with your contract function
-        arguments: [
-          `Action: ${action}`,
-          `Brand: ${data.brandName || productInfo?.brandName}`,
-          `ProductID: ${data.productId || productInfo?.productId}`,
-          `Match: ${data.overallMatch || "unknown"}`,
-          `Mismatches: ${data.mismatchFields?.join(",") || "none"}`,
-          `Wallet: ${walletAddress}`,
-          `Timestamp: ${new Date().toISOString()}`,
-        ],
-        type_arguments: [],
-      };
-
-      console.log("Sending transaction with payload:", payload);
-
-      // Send transaction using Petra Wallet
-      const pendingTransaction = await window.aptos.signAndSubmitTransaction(
-        payload
-      );
-
-      console.log("Transaction submitted:", pendingTransaction);
-
-      // Wait for transaction confirmation
-      const transaction = await window.aptos.waitForTransaction(
-        pendingTransaction.hash
-      );
-
-      console.log("Transaction confirmed:", transaction);
-
-      alert(
-        `✅ ${action} recorded on blockchain!\n\nTransaction Hash: ${transaction.hash}\n\nView on explorer: https://explorer.aptoslabs.com/txn/${transaction.hash}?network=mainnet`
-      );
-
-      return transaction.hash;
-    } catch (error: any) {
-      console.error("Failed to record on blockchain:", error);
-
-      if (error.code === 4001) {
-        alert("Transaction was rejected by user.");
-      } else {
-        alert(
-          `Failed to record on blockchain: ${error.message || "Unknown error"}`
-        );
-      }
-      return null;
-    } finally {
-      setIsRecording(false);
-    }
-  };
-
-  // Initialize QR code scanner
-  useEffect(() => {
-    if (isScanning) {
-      startCamera();
-    } else {
-      stopCamera();
-      stopScanning();
-    }
-
-    return () => {
-      stopCamera();
-      stopScanning();
-    };
-  }, [isScanning]);
-
-  const startCamera = async () => {
-    try {
-      setCameraError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        videoRef.current.play();
-        setTimeout(() => {
-          startScanning();
-        }, 1000);
-      }
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      setCameraError("Unable to access camera. Please check permissions.");
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const stopScanning = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = 0;
-    }
-  };
-
-  const startScanning = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
-
-    const scanFrame = () => {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = context?.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-
-        if (imageData) {
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-          if (code) {
-            handleQRCodeDetected(code.data);
-            return;
-          }
-        }
-      }
-
-      animationFrameRef.current = requestAnimationFrame(scanFrame);
-    };
-
-    animationFrameRef.current = requestAnimationFrame(scanFrame);
+  // Wallet connection handler
+  const handleWalletConnect = (connected: boolean, address: string) => {
+    setWalletConnected(connected);
+    setWalletAddress(address);
   };
 
   const handleQRCodeDetected = (data: string) => {
@@ -300,7 +108,6 @@ const Verify = () => {
     }
 
     setIsScanning(false);
-    stopScanning();
     setIsLoading(false);
   };
 
@@ -367,7 +174,7 @@ const Verify = () => {
     }
   };
 
-  // IMPROVED payload analysis - Smart detection for brand names and product IDs
+  // Payload analysis - Smart detection for brand names and product IDs
   const analyzeProductFromPayload = (payload: any) => {
     console.log("🔍 Analyzing payload:", payload);
 
@@ -377,7 +184,6 @@ const Verify = () => {
     if (payload && payload.arguments && payload.arguments.length > 0) {
       console.log("📋 Arguments found:", payload.arguments);
 
-      // Filter only string arguments
       const stringArgs = payload.arguments.filter(
         (arg: any) => typeof arg === "string" && arg.trim().length > 0
       );
@@ -389,25 +195,22 @@ const Verify = () => {
         for (const arg of stringArgs) {
           const trimmedArg = arg.trim();
 
-          // Check if it looks like a product ID (numeric, alphanumeric with patterns)
           const looksLikeProductId =
-            /^[A-Z0-9]{6,12}$/.test(trimmedArg) || // Uppercase alphanumeric 6-12 chars
-            /^[A-Z]{2,4}[0-9]{3,6}$/.test(trimmedArg) || // Letters followed by numbers
-            /^[0-9]{8,12}$/.test(trimmedArg) || // Pure numbers 8-12 digits
-            /^OD[0-9]+$/.test(trimmedArg); // Starts with OD followed by numbers
+            /^[A-Z0-9]{6,12}$/.test(trimmedArg) ||
+            /^[A-Z]{2,4}[0-9]{3,6}$/.test(trimmedArg) ||
+            /^[0-9]{8,12}$/.test(trimmedArg) ||
+            /^OD[0-9]+$/.test(trimmedArg);
 
-          // Check if it looks like a brand name (mostly letters, reasonable length)
           const looksLikeBrandName =
-            /^[A-Za-z\s]{2,20}$/.test(trimmedArg) && // Letters and spaces, 2-20 chars
-            !/\d/.test(trimmedArg) && // No numbers
-            trimmedArg.length >= 2; // At least 2 characters
+            /^[A-Za-z\s]{2,20}$/.test(trimmedArg) &&
+            !/\d/.test(trimmedArg) &&
+            trimmedArg.length >= 2;
 
           console.log(`🔍 Analyzing "${trimmedArg}":`, {
             looksLikeProductId,
             looksLikeBrandName,
           });
 
-          // Assign based on patterns
           if (looksLikeProductId && !extractedProductId) {
             extractedProductId = trimmedArg;
             console.log("🆔 Product ID identified:", extractedProductId);
@@ -421,7 +224,6 @@ const Verify = () => {
         if (!extractedBrand || !extractedProductId) {
           console.log("🔄 Using fallback position-based detection");
 
-          // Common pattern: product IDs come first, then brand names
           for (let i = 0; i < stringArgs.length; i++) {
             const arg = stringArgs[i];
             if (!extractedProductId && arg.length >= 6 && arg.length <= 15) {
@@ -439,11 +241,9 @@ const Verify = () => {
 
         // ULTIMATE FALLBACK: Simple position-based assignment
         if (!extractedBrand && stringArgs.length >= 1) {
-          // Last string argument is often the brand name
           extractedBrand = stringArgs[stringArgs.length - 1];
         }
         if (!extractedProductId && stringArgs.length >= 2) {
-          // First string argument is often the product ID
           extractedProductId = stringArgs[0];
         }
       }
@@ -476,7 +276,6 @@ const Verify = () => {
       extractedProductId,
     });
 
-    // SMART MATCHING: Case-insensitive for brand, exact for product ID
     const normalizedUserBrand = brandName.toLowerCase().trim();
     const normalizedExtractedBrand = extractedBrand.toLowerCase().trim();
 
@@ -492,16 +291,14 @@ const Verify = () => {
       extractedProductId: extractedProductId,
     });
 
-    // Determine mismatch fields
     const mismatchFields: string[] = [];
     if (!isBrandMatch) mismatchFields.push("Brand Name");
     if (!isProductIdMatch) mismatchFields.push("Product ID");
 
     const matchStatus = mismatchFields.length === 0 ? "valid" : "mismatch";
 
-    // Determine return and refund eligibility based on mismatch fields
-    const returnEligible = mismatchFields.length > 0; // Any mismatch makes return eligible
-    const refundEligible = mismatchFields.length === 2; // Only both mismatched makes refund eligible
+    const returnEligible = mismatchFields.length > 0;
+    const refundEligible = mismatchFields.length === 2;
 
     const productInfo: ProductInfo = {
       brandName,
@@ -528,7 +325,6 @@ const Verify = () => {
     setShowReEnterForm(true);
     setVerificationResult(null);
     setProductInfo(null);
-    // Keep the current brandName and productId values for editing
   };
 
   const initiateReturnProcess = async () => {
@@ -543,7 +339,6 @@ const Verify = () => {
         : null
     );
 
-    // Record return initiation on blockchain
     if (walletConnected) {
       const txHash = await recordOnBlockchain("Return Initiated", {
         brandName: productInfo.brandName,
@@ -574,7 +369,6 @@ const Verify = () => {
         );
       }
     } else {
-      // Simulate without blockchain if wallet not connected
       setTimeout(() => {
         setProductInfo((prev) =>
           prev
@@ -600,7 +394,6 @@ const Verify = () => {
         : null
     );
 
-    // Record refund initiation on blockchain
     if (walletConnected) {
       const txHash = await recordOnBlockchain("Refund Initiated", {
         brandName: productInfo.brandName,
@@ -631,7 +424,6 @@ const Verify = () => {
         );
       }
     } else {
-      // Simulate without blockchain if wallet not connected
       setTimeout(() => {
         setProductInfo((prev) =>
           prev
@@ -643,6 +435,25 @@ const Verify = () => {
         );
       }, 3000);
     }
+  };
+
+  const handleRecordMismatch = () => {
+    recordOnBlockchain("Product Mismatch Detected", {
+      ...verificationResult,
+      brandName: productInfo?.brandName,
+      productId: productInfo?.productId,
+      mismatchFields: productInfo?.mismatchFields,
+      walletAddress,
+    });
+  };
+
+  const handleRecordSuccess = () => {
+    recordOnBlockchain("Product Verification Success", {
+      ...verificationResult,
+      brandName: productInfo?.brandName,
+      productId: productInfo?.productId,
+      walletAddress,
+    });
   };
 
   const handleScanClick = () => {
@@ -700,80 +511,15 @@ const Verify = () => {
     return parts[parts.length - 1];
   };
 
-  const formatWalletAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 via-white-50 to-blue-50">
-      {/* Sticky Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Left side - Home Icon */}
-            <motion.button
-              onClick={() => navigate("/home")}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
-              title="Go to Home"
-            >
-              <MdHome size={24} />
-              <span
-                className="font-semibold"
-                onClick={() => navigate("/home")}
-              >
-                Home
-              </span>
-            </motion.button>
-
-            {/* Center - Logo/Title */}
-            <div className="flex-1 text-center">
-              <h1 className="text-xl font-bold text-gray-800">
-                Smart Product Verify
-              </h1>
-            </div>
-
-            {/* Right side - Wallet Connection */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <MdAccountBalanceWallet className="text-xl text-blue-600" />
-                <div className="text-sm">
-                  <p className="font-semibold text-gray-800">Petra Wallet</p>
-                  <p className="text-gray-600">
-                    {walletConnected
-                      ? `Connected: ${formatWalletAddress(walletAddress)}`
-                      : "Connect your wallet"}
-                  </p>
-                </div>
-              </div>
-              {!walletConnected ? (
-                <motion.button
-                  onClick={connectWallet}
-                  disabled={isWalletConnecting}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 flex items-center gap-2 text-sm"
-                >
-                  <MdAccountBalanceWallet size={16} />
-                  {isWalletConnecting ? "Connecting..." : "Connect"}
-                </motion.button>
-              ) : (
-                <motion.button
-                  onClick={disconnectWallet}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-semibold flex items-center gap-2 text-sm"
-                >
-                  Disconnect
-                </motion.button>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Remove the old wallet banner since it's now in navbar */}
+      {/* Navbar Component */}
+      <NavbarWallet
+        walletConnected={walletConnected}
+        walletAddress={walletAddress}
+        isWalletConnecting={isWalletConnecting}
+        onWalletConnect={handleWalletConnect}
+      />
 
       <main className="pt-32 pb-16">
         {/* Hero Section */}
@@ -813,78 +559,12 @@ const Verify = () => {
         </div>
 
         {/* Camera Scanner Modal */}
-        <AnimatePresence>
-          {isScanning && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50"
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl p-6 max-w-2xl w-full mx-auto"
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-800">
-                    Scan QR Code
-                  </h3>
-                  <button
-                    onClick={handleCloseCamera}
-                    className="text-gray-500 hover:text-gray-700 transition-colors p-2"
-                  >
-                    <MdClose size={24} />
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <div className="bg-black rounded-xl overflow-hidden mb-4">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-96 object-cover"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-64 h-64 border-2 border-green-400 rounded-lg relative">
-                        <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-green-400"></div>
-                        <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-green-400"></div>
-                        <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-green-400"></div>
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-green-400"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {cameraError && (
-                    <div className="text-red-500 text-center mb-4 p-4 bg-red-50 rounded-lg">
-                      {cameraError}
-                    </div>
-                  )}
-
-                  <div className="text-center mb-4">
-                    <p className="text-green-600 font-semibold">
-                      🔍 Scanning for QR codes... Point camera at QR code
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleCloseCamera}
-                      className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
-                    >
-                      Close Camera
-                    </button>
-                  </div>
-                </div>
-
-                <canvas ref={canvasRef} className="hidden" />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <ScanningCamera
+          isScanning={isScanning}
+          onClose={handleCloseCamera}
+          onQRCodeDetected={handleQRCodeDetected}
+          cameraError={cameraError}
+        />
 
         {/* Transaction & Product Verification Section */}
         <AnimatePresence>
@@ -1051,17 +731,7 @@ const Verify = () => {
 
                         <div className="flex gap-3">
                           <motion.button
-                            onClick={() =>
-                              recordOnBlockchain(
-                                "Product Verification Success",
-                                {
-                                  ...verificationResult,
-                                  brandName: productInfo?.brandName,
-                                  productId: productInfo?.productId,
-                                  walletAddress,
-                                }
-                              )
-                            }
+                            onClick={handleRecordSuccess}
                             disabled={isRecording}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -1162,141 +832,17 @@ const Verify = () => {
                           </div>
                         </div>
 
-                        {/* Eligibility Status */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                          <div
-                            className={`p-4 rounded-lg text-center ${
-                              productInfo?.returnStatus === "eligible"
-                                ? "bg-orange-50 border border-orange-200"
-                                : "bg-gray-50"
-                            }`}
-                          >
-                            <p className="font-semibold">Return Eligibility</p>
-                            <p
-                              className={
-                                productInfo?.returnStatus === "eligible"
-                                  ? "text-orange-600"
-                                  : "text-gray-600"
-                              }
-                            >
-                              {productInfo?.returnStatus === "eligible"
-                                ? "✅ Eligible"
-                                : "❌ Not Eligible"}
-                            </p>
-                            {productInfo?.mismatchFields.length === 1 && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                (Any mismatch makes return eligible)
-                              </p>
-                            )}
-                          </div>
-                          <div
-                            className={`p-4 rounded-lg text-center ${
-                              productInfo?.refundStatus === "eligible"
-                                ? "bg-green-50 border border-green-200"
-                                : "bg-gray-50"
-                            }`}
-                          >
-                            <p className="font-semibold">Refund Eligibility</p>
-                            <p
-                              className={
-                                productInfo?.refundStatus === "eligible"
-                                  ? "text-green-600"
-                                  : "text-gray-600"
-                              }
-                            >
-                              {productInfo?.refundStatus === "eligible"
-                                ? "✅ Eligible"
-                                : "❌ Not Eligible"}
-                            </p>
-                            {productInfo?.mismatchFields.length === 1 && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                (Only both mismatched for refund)
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="space-y-3">
-                          <motion.button
-                            onClick={() => {
-                              recordOnBlockchain("Product Mismatch Detected", {
-                                ...verificationResult,
-                                brandName: productInfo?.brandName,
-                                productId: productInfo?.productId,
-                                mismatchFields: productInfo?.mismatchFields,
-                                walletAddress,
-                              });
-                            }}
-                            disabled={isRecording}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="w-full px-6 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                          >
-                            <MdContentCopy size={20} />
-                            {isRecording
-                              ? "Recording..."
-                              : "Record Mismatch on Blockchain"}
-                          </motion.button>
-
-                          <div className="flex gap-3">
-                            <motion.button
-                              onClick={initiateReturnProcess}
-                              disabled={productInfo?.returnStatus !== "eligible"}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className="flex-1 px-4 py-3 bg-white text-black border-2 border-orange-500 rounded-lg hover:bg-orange-50 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              <MdAssignmentReturn />
-                              {productInfo?.returnStatus === "processing"
-                                ? "Processing..."
-                                : productInfo?.returnStatus === "completed"
-                                ? "Return Completed"
-                                : "Initiate Return"}
-                            </motion.button>
-                            <motion.button
-                              onClick={initiateRefundProcess}
-                              disabled={productInfo?.refundStatus !== "eligible"}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className="flex-1 px-4 py-3 bg-white text-black border-2 border-green-500 rounded-lg hover:bg-green-50 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              <MdPayment />
-                              {productInfo?.refundStatus === "processing"
-                                ? "Processing..."
-                                : productInfo?.refundStatus === "completed"
-                                ? "Refund Completed"
-                                : "Process Refund"}
-                            </motion.button>
-                          </div>
-
-                          <motion.button
-                            onClick={reEnterProductInfo}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="w-full px-6 py-3 bg-white text-black border-2 border-gray-400 rounded-xl hover:bg-gray-50 transition-colors font-semibold flex items-center justify-center gap-2"
-                          >
-                            <MdEdit size={20} />
-                            Edit Product Details
-                          </motion.button>
-                        </div>
-
-                        {/* Status Updates */}
-                        {(productInfo?.returnStatus === "processing" ||
-                          productInfo?.refundStatus === "processing") && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="mt-4 p-3 bg-blue-50 rounded-lg"
-                          >
-                            <p className="text-blue-700 text-sm text-center">
-                              {productInfo.returnStatus === "processing" &&
-                                "🔄 Return process initiated..."}
-                              {productInfo.refundStatus === "processing" &&
-                                "💰 Refund process initiated..."}
-                            </p>
-                          </motion.div>
-                        )}
+                        {/* ActionEligible Component */}
+                        <ActionEligible
+                          productInfo={productInfo!}
+                          verificationResult={verificationResult}
+                          walletAddress={walletAddress}
+                          isRecording={isRecording}
+                          onRecordMismatch={handleRecordMismatch}
+                          onInitiateReturn={initiateReturnProcess}
+                          onInitiateRefund={initiateRefundProcess}
+                          onEditDetails={reEnterProductInfo}
+                        />
                       </motion.div>
                     )}
 

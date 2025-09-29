@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import img from '../assets/decentralized.png';
 import Navbar from '../components/Navbar';
 
-const Home = () => {
+const Homepage = () => {
   const navigate = useNavigate();
 
   return (
@@ -122,4 +122,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Homepage;
