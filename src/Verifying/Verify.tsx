@@ -712,7 +712,7 @@ const Verify = () => {
           <div className="flex items-center justify-between">
             {/* Left side - Home Icon */}
             <motion.button
-              onClick={() => navigate("/verify")}
+              onClick={() => navigate("/home")}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
@@ -721,7 +721,7 @@ const Verify = () => {
               <MdHome size={24} />
               <span
                 className="font-semibold"
-                onClick={() => navigate("/verify")}
+                onClick={() => navigate("/home")}
               >
                 Home
               </span>
@@ -1242,11 +1242,7 @@ const Verify = () => {
                           <div className="flex gap-3">
                             <motion.button
                               onClick={initiateReturnProcess}
-                              disabled={
-                                productInfo?.returnStatus !== "eligible" ||
-                                productInfo?.returnStatus === "processing" ||
-                                productInfo?.returnStatus === "completed"
-                              }
+                              disabled={productInfo?.returnStatus !== "eligible"}
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               className="flex-1 px-4 py-3 bg-white text-black border-2 border-orange-500 rounded-lg hover:bg-orange-50 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
@@ -1260,11 +1256,7 @@ const Verify = () => {
                             </motion.button>
                             <motion.button
                               onClick={initiateRefundProcess}
-                              disabled={
-                                productInfo?.refundStatus !== "eligible" ||
-                                productInfo?.refundStatus === "processing" ||
-                                productInfo?.refundStatus === "completed"
-                              }
+                              disabled={productInfo?.refundStatus !== "eligible"}
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               className="flex-1 px-4 py-3 bg-white text-black border-2 border-green-500 rounded-lg hover:bg-green-50 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
