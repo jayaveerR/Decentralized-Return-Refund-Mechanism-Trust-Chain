@@ -13,6 +13,7 @@ import type { TransactionDetails } from "../services/TransactionAnalysisService"
 interface ProductInfo {
   brandName: string;
   productId: string;
+  userAddress: string;
   expectedBrand: string;
   expectedProductId: string;
   matchStatus: "valid" | "mismatch" | "pending";
@@ -33,6 +34,7 @@ interface TransactionVerificationSectionProps {
   walletAddress: string;
   brandName: string;
   productId: string;
+  userAddress: string;
   onCopyToClipboard: (text: string) => void;
   onFetchData: () => void;
   onVerifyProductMatch: () => void;
@@ -44,6 +46,7 @@ interface TransactionVerificationSectionProps {
   onResetScan: () => void;
   onBrandNameChange: (value: string) => void;
   onProductIdChange: (value: string) => void;
+  onUserAddressChange: (value: string) => void;
   formatTimestamp: (timestamp: string) => string;
   formatGasUsed: (gasUsed: string) => string;
   formatFunctionName: (func: string) => string;
@@ -61,6 +64,7 @@ const TransactionVerificationSection = ({
   walletAddress,
   brandName,
   productId,
+  userAddress,
   onCopyToClipboard,
   onFetchData,
   onVerifyProductMatch,
@@ -72,6 +76,7 @@ const TransactionVerificationSection = ({
   onResetScan,
   onBrandNameChange,
   onProductIdChange,
+  onUserAddressChange,
   formatTimestamp,
   formatGasUsed,
   formatFunctionName,
@@ -135,6 +140,7 @@ const TransactionVerificationSection = ({
             walletAddress={walletAddress}
             brandName={brandName}
             productId={productId}
+            userAddress={userAddress}
             onVerifyProductMatch={onVerifyProductMatch}
             onReEnterProductInfo={onReEnterProductInfo}
             onRecordSuccess={onRecordSuccess}
@@ -143,6 +149,7 @@ const TransactionVerificationSection = ({
             onInitiateRefund={onInitiateRefund}
             onBrandNameChange={onBrandNameChange}
             onProductIdChange={onProductIdChange}
+            onUserAddressChange={onUserAddressChange}
             formatTimestamp={formatTimestamp}
             formatGasUsed={formatGasUsed}
             formatFunctionName={formatFunctionName}
@@ -199,7 +206,7 @@ const FetchDataButton = ({ isLoading, onFetchData }: { isLoading: boolean; onFet
       disabled={isLoading}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className="px-8 py-4 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold text-lg disabled:opacity-50 flex items-center justify-center gap-3 mx-auto"
+      className="px-8 py-4 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold text-lg disabled:opacity-50 flex items-center justify-center gap-3 mx-auto cursor-pointer"
     >
       <MdRefresh size={24} />
       {isLoading
@@ -218,6 +225,7 @@ const TransactionDetailsContent = ({
   walletAddress,
   brandName,
   productId,
+  userAddress,
   onVerifyProductMatch,
   onReEnterProductInfo,
   onRecordSuccess,
@@ -226,6 +234,7 @@ const TransactionDetailsContent = ({
   onInitiateRefund,
   onBrandNameChange,
   onProductIdChange,
+  onUserAddressChange,
   formatTimestamp,
   formatGasUsed,
   formatFunctionName,
@@ -237,8 +246,10 @@ const TransactionDetailsContent = ({
         showReEnterForm={showReEnterForm}
         brandName={brandName}
         productId={productId}
+        userAddress={userAddress}
         onBrandNameChange={onBrandNameChange}
         onProductIdChange={onProductIdChange}
+        onUserAddressChange={onUserAddressChange}
         onVerifyProductMatch={onVerifyProductMatch}
       />
     )}
@@ -273,14 +284,6 @@ const TransactionDetailsContent = ({
       formatTimestamp={formatTimestamp}
       formatGasUsed={formatGasUsed}
     />
-
-    {/* Payload Analysis */}
-    {transactionDetails.payload && (
-      <PayloadAnalysis
-        transactionDetails={transactionDetails}
-        formatFunctionName={formatFunctionName}
-      />
-    )}
   </div>
 );
 
@@ -288,8 +291,10 @@ const ProductVerificationForm = ({
   showReEnterForm,
   brandName,
   productId,
+  userAddress,
   onBrandNameChange,
   onProductIdChange,
+  onUserAddressChange,
   onVerifyProductMatch,
 }: any) => (
   <motion.div
@@ -332,9 +337,24 @@ const ProductVerificationForm = ({
           Enter the product ID exactly as it appears in the transaction
         </p>
       </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          User Address
+        </label>
+        <input
+          type="text"
+          value={userAddress}
+          onChange={(e) => onUserAddressChange(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-mono"
+          placeholder="Enter user wallet address"
+        />
+        <p className="text-sm text-gray-500 mt-1">
+          Enter any wallet address for product ownership
+        </p>
+      </div>
       <motion.button
         onClick={onVerifyProductMatch}
-        disabled={!brandName || !productId}
+        disabled={!brandName || !productId || !userAddress}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className="w-full px-6 py-4 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -366,13 +386,10 @@ const ProductMatchSuccess = ({
       </p>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <div className="text-center p-4 bg-green-50 rounded-lg">
         <p className="font-semibold text-green-800">Brand Name</p>
         <p className="text-green-600">✅ Perfect Match</p>
-        <p className="text-sm text-gray-600 mt-1">
-          Expected: {productInfo?.expectedBrand}
-        </p>
         <p className="text-sm text-gray-600">
           Entered: {productInfo?.brandName}
         </p>
@@ -380,11 +397,15 @@ const ProductMatchSuccess = ({
       <div className="text-center p-4 bg-green-50 rounded-lg">
         <p className="font-semibold text-green-800">Product ID</p>
         <p className="text-green-600">✅ Perfect Match</p>
-        <p className="text-sm text-gray-600 mt-1">
-          Expected: {productInfo?.expectedProductId}
-        </p>
         <p className="text-sm text-gray-600">
           Entered: {productInfo?.productId}
+        </p>
+      </div>
+      <div className="text-center p-4 bg-green-50 rounded-lg">
+        <p className="font-semibold text-green-800">User Address</p>
+        <p className="text-green-600">✅ Registered</p>
+        <p className="text-sm text-gray-600 font-mono break-all">
+          {productInfo?.userAddress}
         </p>
       </div>
     </div>
@@ -441,7 +462,7 @@ const ProductMismatchDetected = ({
     </div>
 
     {/* Mismatch Details */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <div
         className={`text-center p-4 rounded-lg ${
           verificationResult.brandMatch ? "bg-green-50" : "bg-red-50"
@@ -454,9 +475,6 @@ const ProductMismatchDetected = ({
           }
         >
           {verificationResult.brandMatch ? "✅ Matched" : "❌ Mismatch"}
-        </p>
-        <p className="text-sm text-gray-600 mt-1">
-          Expected: {productInfo?.expectedBrand}
         </p>
         <p className="text-sm text-gray-600">
           Entered: {productInfo?.brandName}
@@ -475,11 +493,15 @@ const ProductMismatchDetected = ({
         >
           {verificationResult.productIdMatch ? "✅ Matched" : "❌ Mismatch"}
         </p>
-        <p className="text-sm text-gray-600 mt-1">
-          Expected: {productInfo?.expectedProductId}
-        </p>
         <p className="text-sm text-gray-600">
           Entered: {productInfo?.productId}
+        </p>
+      </div>
+      <div className="text-center p-4 bg-green-50 rounded-lg">
+        <p className="font-semibold">User Address</p>
+        <p className="text-green-600">✅ Registered</p>
+        <p className="text-sm text-gray-600 font-mono break-all">
+          {productInfo?.userAddress}
         </p>
       </div>
     </div>
@@ -543,42 +565,6 @@ const TransactionDetailsDisplay = ({
           {formatTimestamp(transactionDetails.timestamp)}
         </p>
       </div>
-    </div>
-  </motion.div>
-);
-
-const PayloadAnalysis = ({ transactionDetails, formatFunctionName }: any) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: 0.3 }}
-    className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
-  >
-    <h3 className="text-xl font-semibold text-gray-800 mb-4">
-      Payload Analysis
-    </h3>
-    <div className="space-y-3">
-      <div>
-        <p className="font-medium text-gray-700">Function:</p>
-        <p className="font-mono text-blue-600 text-lg">
-          {formatFunctionName(transactionDetails.payload.function)}
-        </p>
-      </div>
-      <div>
-        <p className="font-medium text-gray-700">Full Function:</p>
-        <p className="font-mono text-sm break-all text-gray-800 bg-gray-50 p-3 rounded-lg">
-          {transactionDetails.payload.function}
-        </p>
-      </div>
-      {transactionDetails.payload.arguments &&
-        transactionDetails.payload.arguments.length > 0 && (
-          <div>
-            <p className="font-medium text-gray-700">Arguments:</p>
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg mt-2 border">
-              {JSON.stringify(transactionDetails.payload.arguments, null, 2)}
-            </pre>
-          </div>
-        )}
     </div>
   </motion.div>
 );

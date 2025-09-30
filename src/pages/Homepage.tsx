@@ -32,7 +32,7 @@ const Homepage = () => {
                 Add Items
               </button>
               <button 
-                className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all duration-300"
+                className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 cursor-pointer"
                 onClick={() => navigate('/verify')}
               >
                 Verify Product
