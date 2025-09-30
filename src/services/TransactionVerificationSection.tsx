@@ -112,12 +112,12 @@ const TransactionVerificationSection = ({
             </h3>
             <button
               onClick={() => onCopyToClipboard(scannedData)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors hidden"
             >
               <MdContentCopy size={20} />
             </button>
           </div>
-          <p className="text-gray-700 font-mono text-sm break-all bg-gray-100 p-4 rounded-lg">
+          <p className="text-gray-700 font-mono text-sm break-all bg-gray-100 p-4 rounded-lg hidden">
             {scannedData}
           </p>
         </div>
