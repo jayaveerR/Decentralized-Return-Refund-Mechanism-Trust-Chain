@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Toaster, toast } from "react-hot-toast";
 import ScanningCamera from "../components/ScanningCamera";
 import NavbarWallet from "../components/NavbarWallet";
 import { useBlockchainService } from "../services/BlockchainService";
@@ -9,8 +10,6 @@ import type { TransactionDetails } from "../services/TransactionAnalysisService"
 import HeroSection from "./HeroSection";
 import ScanButton from "../components/ScanButton";
 import TransactionVerificationSection from "../services/TransactionVerificationSection";
-import SuccessTransaction from "../services/SuccessTransaction";
-import FailedTransaction from "../services/FailedTransaction";
 
 // Types for product verification
 interface ProductInfo {
@@ -40,20 +39,19 @@ const Verify = () => {
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const [brandName, setBrandName] = useState("");
   const [productId, setProductId] = useState("");
-  const [userAddress, setUserAddress] = useState(""); // User can enter any address
+  const [userAddress, setUserAddress] = useState("");
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [showReEnterForm, setShowReEnterForm] = useState(false);
   const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
 
   // Wallet states
   const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>(""); // Connected wallet address
+  const [walletAddress, setWalletAddress] = useState<string>("");
   const [isWalletConnecting, setIsWalletConnecting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  // Services - updated to use the new functions
+  // Services with proper toast integration
   const { 
-    recordOnBlockchain, 
     recordMismatch, 
     recordSuccess, 
     recordReturnInitiation, 
@@ -62,6 +60,7 @@ const Verify = () => {
     walletConnected,
     walletAddress,
     onRecordingChange: setIsRecording,
+    // Pass toast functions to the service
   });
 
   const {
@@ -77,6 +76,11 @@ const Verify = () => {
   const handleWalletConnect = (connected: boolean, address: string) => {
     setWalletConnected(connected);
     setWalletAddress(address);
+    if (connected) {
+      toast.success(`Wallet connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
+    } else {
+      toast.success('Wallet disconnected');
+    }
   };
 
   const handleQRCodeDetected = (data: string) => {
@@ -88,10 +92,10 @@ const Verify = () => {
     if (extractedHash) {
       setScannedData(extractedHash);
       setTransactionDetails(null);
+      toast.success('QR code scanned successfully!');
     } else {
-      setCameraError(
-        "Invalid QR code content. Please scan a valid transaction hash QR code."
-      );
+      setCameraError("Invalid QR code content. Please scan a valid transaction hash QR code.");
+      toast.error('Invalid QR code format');
       setIsLoading(false);
       return;
     }
@@ -101,70 +105,64 @@ const Verify = () => {
   };
 
   const handleFetchData = async () => {
-    if (!scannedData) return;
+    if (!scannedData) {
+      toast.error('No scanned data available');
+      return;
+    }
 
     setIsLoading(true);
     setFetchError(null);
+    setTransactionDetails(null);
 
-    const { data, error } = await fetchRealTransactionDetails(scannedData);
-
-    if (data) {
-      setTransactionDetails(data);
-    } else {
-      setFetchError(error);
+    try {
+      const details = await fetchRealTransactionDetails(scannedData);
+      if (details && typeof details === "object" && details.data) {
+        setTransactionDetails(details.data);
+        toast.success('Transaction details fetched successfully!');
+      } else {
+        setFetchError(details?.error || 'No transaction details found for this hash.');
+        toast.error('No transaction details found.');
+      }
+    } catch (error: any) {
+      setFetchError(error?.message || 'Failed to fetch transaction details.');
+      toast.error('Failed to fetch transaction details.');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
-  // Updated product matching logic - address is not verified against transaction
+  
+
   const verifyProductMatch = () => {
-    if (!brandName || !productId || !userAddress || !transactionDetails) return;
+    if (!brandName || !productId || !userAddress || !transactionDetails) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
     const { extractedBrand, extractedProductId } = analyzeProductFromPayload(
       transactionDetails.payload
     );
-
-    console.log("🔍 Verification starting...");
-    console.log("👤 User entered:", { brandName, productId, userAddress });
-    console.log("📦 Extracted from payload:", {
-      extractedBrand,
-      extractedProductId,
-    });
 
     const normalizedUserBrand = brandName.toLowerCase().trim();
     const normalizedExtractedBrand = extractedBrand.toLowerCase().trim();
 
     const isBrandMatch = normalizedExtractedBrand === normalizedUserBrand;
     const isProductIdMatch = extractedProductId === productId;
-    // Address is always considered valid since user can enter any address
     const isAddressValid = userAddress.trim().length > 0;
-
-    console.log("✅ Match results:", {
-      isBrandMatch,
-      isProductIdMatch,
-      isAddressValid,
-      userBrand: normalizedUserBrand,
-      extractedBrand: normalizedExtractedBrand,
-      userProductId: productId,
-      extractedProductId: extractedProductId,
-      userAddress: userAddress,
-    });
 
     const mismatchFields: string[] = [];
     if (!isBrandMatch) mismatchFields.push("Brand Name");
     if (!isProductIdMatch) mismatchFields.push("Product ID");
-    // Address is not added to mismatch fields since it's always accepted
 
     const matchStatus = mismatchFields.length === 0 ? "valid" : "mismatch";
 
     const returnEligible = mismatchFields.length > 0;
-    const refundEligible = mismatchFields.length >= 2; // Brand + Product ID mismatch
+    const refundEligible = mismatchFields.length >= 2;
 
     const productInfo: ProductInfo = {
       brandName,
       productId,
-      userAddress, // Store the user-entered address
+      userAddress,
       expectedBrand: extractedBrand,
       expectedProductId: extractedProductId,
       matchStatus,
@@ -177,30 +175,32 @@ const Verify = () => {
     setVerificationResult({
       brandMatch: isBrandMatch,
       productIdMatch: isProductIdMatch,
-      addressValid: isAddressValid, // Just check if address is provided
+      addressValid: isAddressValid,
       overallMatch: matchStatus,
       mismatchFields,
-      userEnteredAddress: userAddress, // Pass the user-entered address
+      userEnteredAddress: userAddress,
     });
     setShowReEnterForm(false);
+
+    if (matchStatus === "valid") {
+      toast.success('Product verification successful! All details match.');
+    } else {
+      toast.error(`Verification failed: ${mismatchFields.join(', ')} mismatch`);
+    }
   };
 
   const reEnterProductInfo = () => {
     setShowReEnterForm(true);
     setVerificationResult(null);
     setProductInfo(null);
+    toast('Please re-enter product information');
   };
 
   const initiateReturnProcess = async () => {
     if (!productInfo) return;
 
     setProductInfo((prev) =>
-      prev
-        ? {
-            ...prev,
-            returnStatus: "processing",
-          }
-        : null
+      prev ? { ...prev, returnStatus: "processing" } : null
     );
 
     if (walletConnected) {
@@ -216,34 +216,20 @@ const Verify = () => {
         setLastTransactionHash(txHash);
         setTimeout(() => {
           setProductInfo((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  returnStatus: "completed",
-                }
-              : null
+            prev ? { ...prev, returnStatus: "completed" } : null
           );
         }, 3000);
       } else {
         setProductInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                returnStatus: "eligible",
-              }
-            : null
+          prev ? { ...prev, returnStatus: "eligible" } : null
         );
       }
     } else {
       setTimeout(() => {
         setProductInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                returnStatus: "completed",
-              }
-            : null
+          prev ? { ...prev, returnStatus: "completed" } : null
         );
+        toast.success('Return process completed!');
       }, 3000);
     }
   };
@@ -252,12 +238,7 @@ const Verify = () => {
     if (!productInfo) return;
 
     setProductInfo((prev) =>
-      prev
-        ? {
-            ...prev,
-            refundStatus: "processing",
-          }
-        : null
+      prev ? { ...prev, refundStatus: "processing" } : null
     );
 
     if (walletConnected) {
@@ -273,34 +254,20 @@ const Verify = () => {
         setLastTransactionHash(txHash);
         setTimeout(() => {
           setProductInfo((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  refundStatus: "completed",
-                }
-              : null
+            prev ? { ...prev, refundStatus: "completed" } : null
           );
         }, 3000);
       } else {
         setProductInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                refundStatus: "eligible",
-              }
-            : null
+          prev ? { ...prev, refundStatus: "eligible" } : null
         );
       }
     } else {
       setTimeout(() => {
         setProductInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                refundStatus: "completed",
-              }
-            : null
+          prev ? { ...prev, refundStatus: "completed" } : null
         );
+        toast.success('Refund process completed!');
       }, 3000);
     }
   };
@@ -351,19 +318,21 @@ const Verify = () => {
     setProductId("");
     setUserAddress("");
     setLastTransactionHash(null);
+    toast('Camera activated - scan a QR code');
   };
 
   const handleCloseCamera = () => {
     setIsScanning(false);
     setCameraError(null);
+    toast('Camera closed');
   };
 
-  // Helper function for copy to clipboard
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      alert("Transaction hash copied to clipboard!");
+      toast.success('Transaction hash copied to clipboard!');
     }).catch(err => {
       console.error('Failed to copy: ', err);
+      toast.error('Failed to copy to clipboard');
     });
   };
 
@@ -380,6 +349,7 @@ const Verify = () => {
     setProductId("");
     setUserAddress("");
     setLastTransactionHash(null);
+    toast('Scan reset - ready for new verification');
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -397,6 +367,41 @@ const Verify = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 via-white-50 to-blue-50">
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            borderRadius: '8px',
+            padding: '12px 16px',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 5000,
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
+          },
+          loading: {
+            duration: Infinity,
+            iconTheme: {
+              primary: '#3B82F6',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+
       {/* Navbar Component */}
       <NavbarWallet
         walletConnected={walletConnected}
@@ -438,7 +443,7 @@ const Verify = () => {
               </div>
               <div className="flex gap-3 flex-wrap">
                 <button 
-                  onClick={() => window.open(`https://explorer.aptoslabs.com/txn/${lastTransactionHash}?network=mainnet`, '_blank')}
+                  onClick={() => window.open(`https://explorer.aptoslabs.com/txn/${lastTransactionHash}?network=testnet`, '_blank')}
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   View on Explorer
