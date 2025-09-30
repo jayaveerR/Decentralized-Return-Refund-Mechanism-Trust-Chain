@@ -1,6 +1,6 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
-import Additem from "./pages/Itemadd";
+import ItemAddWithPetraClean from "./Itemadding/ItemAddWithPetraClean";
 import Myorders from "./pages/Myorders";
 import Verify from "./Verifypage/Verify";
 import Qrcode from "./pages/Qrcode";
@@ -12,7 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/home" element={<Homepage />} />
-        <Route path="/additem" element={<Additem />} />
+        <Route path="/additem" element={<ItemAddWithPetraClean />} />
         <Route path="/myorders" element={<Myorders />} />
         <Route path="/verify" element={<Verify />} />
         <Route path="/qrcode" element={<Qrcode />} />

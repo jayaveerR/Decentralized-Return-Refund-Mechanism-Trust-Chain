@@ -59,6 +59,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
                 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
                 disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="Unique product identifier"
+              autoComplete="off"
             />
           </div>
 
