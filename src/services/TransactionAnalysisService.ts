@@ -106,22 +106,21 @@ export const useTransactionAnalysis = (options: AnalysisOptions = {}) => {
           const trimmedArg = arg.trim();
 
           const looksLikeProductId =
-            /^[A-Z0-9]{6,12}$/.test(trimmedArg) || // Uppercase alphanumeric 6-12 chars
-            /^[A-Z]{2,4}[0-9]{3,6}$/.test(trimmedArg) || // Letters followed by numbers
-            /^[0-9]{8,12}$/.test(trimmedArg) || // Pure numbers 8-12 digits
-            /^OD[0-9]+$/.test(trimmedArg); // Starts with OD followed by numbers
+            /^[A-Z0-9]{6,12}$/.test(trimmedArg) ||
+            /^[A-Z]{2,4}[0-9]{3,6}$/.test(trimmedArg) ||
+            /^[0-9]{8,12}$/.test(trimmedArg) ||
+            /^OD[0-9]+$/.test(trimmedArg);
 
           const looksLikeBrandName =
-            /^[A-Za-z\s]{2,20}$/.test(trimmedArg) && // Letters and spaces, 2-20 chars
-            !/\d/.test(trimmedArg) && // No numbers
-            trimmedArg.length >= 2; // At least 2 characters
+            /^[A-Za-z\s]{2,20}$/.test(trimmedArg) &&
+            !/\d/.test(trimmedArg) &&
+            trimmedArg.length >= 2;
 
           log(`🔍 Analyzing "${trimmedArg}":`, {
             looksLikeProductId,
             looksLikeBrandName,
           });
 
-          // Assign based on patterns
           if (looksLikeProductId && !extractedProductId) {
             extractedProductId = trimmedArg;
             log("🆔 Product ID identified:", extractedProductId);
@@ -152,11 +151,9 @@ export const useTransactionAnalysis = (options: AnalysisOptions = {}) => {
 
         // ULTIMATE FALLBACK: Simple position-based assignment
         if (!extractedBrand && stringArgs.length >= 1) {
-          // Last string argument is often the brand name
           extractedBrand = stringArgs[stringArgs.length - 1];
         }
         if (!extractedProductId && stringArgs.length >= 2) {
-          // First string argument is often the product ID
           extractedProductId = stringArgs[0];
         }
       }
@@ -180,7 +177,6 @@ export const useTransactionAnalysis = (options: AnalysisOptions = {}) => {
     
     let confidence: "high" | "medium" | "low" = "low";
     
-    // Determine confidence based on extraction quality
     if (result.extractedBrand !== "Brand not found in transaction" && 
         result.extractedProductId !== "Product ID not found in transaction") {
       confidence = "high";
@@ -229,6 +225,3 @@ export const useTransactionAnalysis = (options: AnalysisOptions = {}) => {
     extractTransactionHash,
   };
 };
-
-// Export types for use in other components
-export type { AnalysisOptions };
