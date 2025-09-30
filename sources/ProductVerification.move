@@ -113,6 +113,14 @@ module ProductVerification::ProductVerification {
         verification_data.verification_count
     }
 
+    // View function to get transaction hash
+    #[view]
+    public fun get_transaction_hash(account_addr: address): String acquires ProductVerificationData {
+        assert!(exists<ProductVerificationData>(account_addr), E_NOT_INITIALIZED);
+        let verification_data = borrow_global<ProductVerificationData>(account_addr);
+        verification_data.transaction_hash
+    }
+
     // View function to get last verification details
     #[view]
     public fun get_last_verification(account_addr: address): (String, String, address, String, String, String, u64) acquires ProductVerificationData {
