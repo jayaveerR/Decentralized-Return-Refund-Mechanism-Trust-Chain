@@ -95,15 +95,13 @@ A transaction hash is then generated and shared with the product owner via Whats
 
 ```env
 
-# Network used by SDK and wallet adapter
-VITE_APP_NETWORK=testnet
+VITE_APP_NETWORK=Testnet
+PROJECT_NAME=decentralized-product-return-trust-chain
+VITE_APTOS_API_KEY=""
+VITE_MODULE_ADDRESS=0xfa1c12cc2e127047b02bc951d71d376cf25b9db220d213bfa972f45c0c55de38
+NFT_STORAGE_KEY=9b58937b.75c14a8de6354943a99c8288f6c86574
 
-# Publisher account (the address that compiles/publishes the Move package)
-VITE_MODULE_PUBLISHER_ACCOUNT_ADDRESS=0x...
-VITE_MODULE_PUBLISHER_ACCOUNT_PRIVATE_KEY=0x...
 
-# Deployed module address (auto-written by publish script, or set manually)
-VITE_MODULE_ADDRESS=0xf50e2e1a30a1bfc7301cfb163b22c1ae77251ccd1b8e71ec81f08c32406dabfa
 
 
 
