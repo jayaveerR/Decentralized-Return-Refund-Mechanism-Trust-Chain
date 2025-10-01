@@ -43,7 +43,13 @@ It should also show items + payment status.
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5c6cebe8738d7c93dfde0ba9128ecb4b4fb45d58/images/tranectionhash.png)
 
 # Generate QR Code Transaction Hash -
+
+Paste the transaction hash and click “Generate QR Code.”
+
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5c6cebe8738d7c93dfde0ba9128ecb4b4fb45d58/images/GenerateQr.png)
+
+Easily share or verify the transaction with buyers via the QR code.
+
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5c6cebe8738d7c93dfde0ba9128ecb4b4fb45d58/images/Qrcode.png)
 
 # Smart Product Verify Return & Refund System -
@@ -59,6 +65,7 @@ It should also show items + payment status.
 # WhatsApp QR Scanner
 Instantly scan QR codes and connect seamlessly through WhatsApp with enhanced security
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5432c38268f371498f6ff7e3fb010fa939756a75/images/whatsAppSucess.png)
+
 
 
 
