@@ -33,6 +33,13 @@ Owner Wallet Address → The blockchain wallet of the product owner/seller (in t
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5c6cebe8738d7c93dfde0ba9128ecb4b4fb45d58/images/Additems.png)
 
 # My Orders -
+
+Seller can pay 0.2 APT (fixed amount).
+
+Once paid, the transaction hash is stored & displayed (like your screenshot).
+
+It should also show items + payment status.
+
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5c6cebe8738d7c93dfde0ba9128ecb4b4fb45d58/images/tranectionhash.png)
 
 # Generate QR Code Transaction Hash -
@@ -52,6 +59,7 @@ Owner Wallet Address → The blockchain wallet of the product owner/seller (in t
 # WhatsApp QR Scanner
 Instantly scan QR codes and connect seamlessly through WhatsApp with enhanced security
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5432c38268f371498f6ff7e3fb010fa939756a75/images/whatsAppSucess.png)
+
 
 
 
