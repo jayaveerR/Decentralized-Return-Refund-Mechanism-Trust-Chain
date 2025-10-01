@@ -4,6 +4,9 @@ import { useAptosWallet } from "./useAptosWallet";
 import { useTransaction } from "./useTransaction";
 import { Navigation } from "./Navigation";
 import { ItemForm } from "./ItemForm";
+import { SuccessPayment } from "./SuccessPayment";
+import { FailedTransaction } from "./FailedTransaction";
+import { useAptTransaction } from "./AptTransaction";
 
 interface ItemFormData {
   productId: string;
@@ -13,6 +16,8 @@ interface ItemFormData {
 }
 
 const NETWORK = import.meta.env.VITE_APP_NETWORK || "Testnet";
+const RECIPIENT_ADDRESS =
+  "0x6b1ba42c8d262c346398f70df6103ded5bf022c08e43626a4b6a7a1eecc9790a";
 
 export default function ItemAddWithPetraClean() {
   const [form, setForm] = useState<ItemFormData>({
@@ -26,9 +31,17 @@ export default function ItemAddWithPetraClean() {
   const [showWalletOptions, setShowWalletOptions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [paymentTransactionHash, setPaymentTransactionHash] = useState<
+    string | null
+  >(null);
   const [explorerUrl, setExplorerUrl] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [showPaymentError, setShowPaymentError] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const {
     connected,
@@ -43,12 +56,26 @@ export default function ItemAddWithPetraClean() {
   const { storeTransactionHash, submitToBlockchain } = useTransaction();
   const navigate = useNavigate();
 
+  // Initialize AptTransaction as a hook
+  const { sendTransaction } = useAptTransaction({
+    amount: "20000000", // 0.2 APT in octas
+    recipientAddress: RECIPIENT_ADDRESS,
+    onSuccess: handlePaymentSuccess,
+    onError: handlePaymentError,
+    onTransactionStart: () => {
+      console.log("Payment transaction starting...");
+      setPaymentProcessing(true);
+      setPaymentError(null);
+    },
+    onTransactionEnd: () => {
+      console.log("Payment transaction ended");
+      setPaymentProcessing(false);
+    },
+  });
+
   // Set explorer URL
   useEffect(() => {
-    const baseUrl =
-      NETWORK.toLowerCase() === "mainnet"
-        ? "https://explorer.aptoslabs.com"
-        : "https://explorer.aptoslabs.com";
+    const baseUrl = "https://explorer.aptoslabs.com";
     setExplorerUrl(`${baseUrl}/txn/`);
   }, []);
 
@@ -62,13 +89,22 @@ export default function ItemAddWithPetraClean() {
     }
   }, [connected, address]);
 
-  // Hide success overlay after 5s
-  useEffect(() => {
-    if (showSuccess) {
-      const timer = setTimeout(() => setShowSuccess(false), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccess]);
+  function handlePaymentSuccess(hash: string) {
+    console.log("Payment success handler called with hash:", hash);
+    setPaymentTransactionHash(hash);
+    setPaymentCompleted(true);
+    setPaymentError(null);
+    setShowPaymentSuccess(true);
+    setShowPaymentError(false);
+  }
+
+  function handlePaymentError(error: string) {
+    console.log("Payment error handler called with:", error);
+    setPaymentError(error);
+    setPaymentCompleted(false);
+    setShowPaymentError(true);
+    setShowPaymentSuccess(false);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -95,6 +131,14 @@ export default function ItemAddWithPetraClean() {
   // ✅ MAIN submit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if payment is completed
+    if (!paymentCompleted) {
+      setErrorMsg(
+        "Please complete the payment first before adding to blockchain"
+      );
+      return;
+    }
 
     const error = validateForm();
     if (error) {
@@ -123,7 +167,7 @@ export default function ItemAddWithPetraClean() {
 
       setShowSuccess(true);
 
-      // Reset form
+      // Reset form and payment status
       setTimeout(() => {
         setForm({
           productId: "",
@@ -131,6 +175,8 @@ export default function ItemAddWithPetraClean() {
           brand: "",
           ownerWalletAddress: address || "",
         });
+        setPaymentCompleted(false);
+        setPaymentTransactionHash(null);
       }, 1000);
     } catch (err: any) {
       console.error("Submission error:", err);
@@ -146,24 +192,41 @@ export default function ItemAddWithPetraClean() {
     }
   };
 
-  // ✅ PayNow handler (separate, not nested!)
-  const handlePayNow = (e: React.FormEvent) => {
+  // ✅ PayNow handler
+  const handlePayNow = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Pay Now clicked:", form);
-    // You can add custom payment logic here
-  
+
+    console.log("Pay Now button clicked");
+
     const error = validateForm();
     if (error) {
       setErrorMsg(error);
       return;
     }
 
+    if (!connected) {
+      setErrorMsg("Please connect your wallet first");
+      return;
+    }
+
+    setErrorMsg(null);
+    setPaymentError(null);
+    setShowPaymentError(false);
+
+    try {
+      console.log("Calling sendTransaction...");
+      await sendTransaction();
+    } catch (err: any) {
+      console.error("Payment initiation error:", err);
+      setPaymentError(err.message || "Failed to initiate payment");
+      setShowPaymentError(true);
+    }
   };
 
-  const viewOnExplorer = () => {
-    if (transactionHash && explorerUrl) {
+  const viewOnExplorer = (hash: string) => {
+    if (hash && explorerUrl) {
       window.open(
-        `${explorerUrl}${transactionHash}?network=${NETWORK.toLowerCase()}`,
+        `${explorerUrl}${hash}?network=${NETWORK.toLowerCase()}`,
         "_blank"
       );
     }
@@ -171,9 +234,49 @@ export default function ItemAddWithPetraClean() {
 
   const navigateToMyOrders = () => navigate("/myorders");
   const closeSuccess = () => setShowSuccess(false);
+  const closePaymentSuccess = () => {
+    console.log("Closing payment success modal");
+    setShowPaymentSuccess(false);
+  };
+  const closePaymentError = () => {
+    console.log("Closing payment error modal");
+    setShowPaymentError(false);
+    setPaymentError(null);
+  };
+
+  const retryPayment = () => {
+    console.log("Retrying payment...");
+    setShowPaymentError(false);
+    setPaymentError(null);
+    // Create a proper event for retry
+    const fakeEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent;
+    handlePayNow(fakeEvent);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative">
-      {/* Success Animation Overlay */}
+      {/* Payment Success Overlay */}
+      {showPaymentSuccess && paymentTransactionHash && (
+        <SuccessPayment
+          transactionHash={paymentTransactionHash}
+          amount="0.2 APT"
+          onViewExplorer={() => viewOnExplorer(paymentTransactionHash)}
+          onContinue={closePaymentSuccess}
+        />
+      )}
+
+      {/* Payment Error Overlay */}
+      {showPaymentError && paymentError && (
+        <FailedTransaction
+          errorMessage={paymentError}
+          onRetry={retryPayment}
+          onCancel={closePaymentError}
+        />
+      )}
+
+      {/* Original Success Overlay */}
       {showSuccess && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform transition-all duration-500 scale-100 animate-in fade-in-0 zoom-in-95">
@@ -197,40 +300,22 @@ export default function ItemAddWithPetraClean() {
                     </svg>
                   </div>
                 </div>
-
-                {/* Pulsing rings */}
-                <div className="absolute inset-0 border-4 border-green-200 rounded-full animate-ping opacity-75"></div>
-                <div className="absolute inset-0 border-2 border-green-300 rounded-full animate-pulse"></div>
               </div>
             </div>
 
-            {/* Success Text */}
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2 animate-in fade-in-0 duration-500">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
                 Success!
               </h3>
-              <p className="text-green-600 font-medium mb-2 animate-in fade-in-0 duration-700">
+              <p className="text-green-600 font-medium mb-2">
                 Item successfully added to blockchain!
               </p>
-              <p className="text-gray-600 text-sm animate-in fade-in-0 duration-900">
+              <p className="text-gray-600 text-sm">
                 Transaction has been confirmed on {NETWORK} network
               </p>
-
-              {/* Transaction Hash */}
-              {transactionHash && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg animate-in fade-in-0 duration-1100">
-                  <p className="text-xs text-gray-500 mb-1">
-                    Transaction Hash:
-                  </p>
-                  <p className="font-mono text-xs break-all text-gray-700">
-                    {transactionHash}
-                  </p>
-                </div>
-              )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-3 animate-in fade-in-0 duration-1300">
+            <div className="flex space-x-3">
               <button
                 onClick={closeSuccess}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"
@@ -238,7 +323,7 @@ export default function ItemAddWithPetraClean() {
                 Continue
               </button>
               <button
-                onClick={viewOnExplorer}
+                onClick={() => viewOnExplorer(transactionHash || "")}
                 className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors duration-200"
               >
                 View Explorer
@@ -263,66 +348,66 @@ export default function ItemAddWithPetraClean() {
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Static Success Banner (alternative to modal) */}
-        {transactionHash && !showSuccess && (
+        {/* Payment Status Banner */}
+        {paymentCompleted && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg animate-in slide-in-from-top duration-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-green-800 font-medium">
-                    Transaction Successful!
-                  </p>
-                  <p className="text-green-600 text-sm mt-1">
-                    Item successfully added to blockchain on {NETWORK}
-                  </p>
-                </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={viewOnExplorer}
-                  className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
-                >
-                  View Explorer
-                </button>
-                <button
-                  onClick={navigateToMyOrders}
-                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
-                >
-                  View My Orders
-                </button>
+              <div>
+                <p className="text-green-800 font-medium">Payment Completed!</p>
+                <p className="text-green-600 text-sm">
+                  0.2 APT payment confirmed. You can now add item to blockchain.
+                </p>
+                {paymentTransactionHash && (
+                  <p className="text-xs text-green-500 mt-1">
+                    TX: {paymentTransactionHash.substring(0, 10)}...
+                    {paymentTransactionHash.substring(
+                      paymentTransactionHash.length - 8
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>
         )}
 
         {errorMsg && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm animate-in slide-in-from-top duration-500">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             {errorMsg}
+          </div>
+        )}
+
+        {paymentProcessing && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-600 text-sm">
+            <div className="flex items-center space-x-3">
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <span>Processing payment transaction...</span>
+            </div>
           </div>
         )}
 
         <ItemForm
           form={form}
           connected={connected}
-          submitting={submitting}
+          submitting={submitting || paymentProcessing}
           handleChange={handleChange}
           handleSubmit={handleSubmit}
-           handlePayNow={handlePayNow} // ✅ added
+          handlePayNow={handlePayNow}
+          paymentCompleted={paymentCompleted}
         />
       </main>
     </div>

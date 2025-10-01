@@ -11,7 +11,8 @@ interface ItemFormProps {
   submitting: boolean;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent) => void;
-  handlePayNow: (e: React.FormEvent) => void; // ✅ required now
+  handlePayNow: (e: React.FormEvent) => void;
+  paymentCompleted?: boolean; // Add this
 }
 
 export const ItemForm: React.FC<ItemFormProps> = ({
@@ -21,6 +22,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
   handleChange,
   handleSubmit,
   handlePayNow,
+  paymentCompleted = false, // Add default value
 }) => {
   const MODULE_ADDRESS = import.meta.env.VITE_MODULE_ADDRESS!;
   const NETWORK = import.meta.env.VITE_APP_NETWORK || "Testnet";
@@ -37,7 +39,8 @@ export const ItemForm: React.FC<ItemFormProps> = ({
           Add Item to Trust-Chain
         </h1>
         <p className="text-gray-600">
-          Register your product on the {NETWORK} blockchain for authenticity tracking
+          Register your product on the {NETWORK} blockchain for authenticity
+          tracking
         </p>
         <div className="mt-2 text-sm text-gray-500">
           Module: {maskAddress(MODULE_ADDRESS)}
@@ -125,11 +128,47 @@ export const ItemForm: React.FC<ItemFormProps> = ({
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-center space-x-4 pt-4">
-          {/* Add to Blockchain */}
+        <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 pt-4">
+          {/* Pay Now 0.2 APT - Always visible */}
+          <button
+            type="button"
+            onClick={handlePayNow}
+            disabled={!connected || submitting || paymentCompleted}
+            className="px-8 py-3 bg-green-600 text-white rounded-lg font-medium 
+              hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
+              flex items-center space-x-2 min-w-[200px] justify-center"
+          >
+            {submitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Processing Payment...</span>
+              </>
+            ) : paymentCompleted ? (
+              <>
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <span>Payment Completed</span>
+              </>
+            ) : (
+              <span>Pay Now 0.2 APT</span>
+            )}
+          </button>
+
+          {/* Add to Blockchain - Enabled after payment */}
           <button
             type="submit"
-            disabled={!connected || submitting}
+            disabled={!connected || submitting || !paymentCompleted}
             className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium 
               hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
               flex items-center space-x-2 min-w-[200px] justify-center"
@@ -140,27 +179,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
                 <span>Processing Transaction...</span>
               </>
             ) : (
-              <span className="cursor-pointer">Add to Blockchain</span>
-            )}
-          </button>
-
-          {/* Pay Now 0.2 APT */}
-          <button
-            type="button"
-            onClick={handlePayNow}
-            disabled={!connected || submitting}
-            className="px-8 py-3 bg-green-600 text-white rounded-lg font-medium 
-              hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
-              flex items-center space-x-2 min-w-[200px] justify-center"
-          >
-            
-            {submitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Processing Transaction...</span>
-              </>
-            ) : (
-            <span className="cursor-pointer">Pay Now 0.2 APT</span>
+              <span>Add to Blockchain</span>
             )}
           </button>
         </div>
