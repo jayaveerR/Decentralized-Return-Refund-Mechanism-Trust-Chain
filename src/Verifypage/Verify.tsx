@@ -2,14 +2,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
-import ScanningCamera from "../components/ScanningCamera";
-import NavbarWallet from "../components/NavbarWallet";
-import { useBlockchainService } from "../services/BlockchainService";
-import { useTransactionAnalysis } from "../services/TransactionAnalysisService";
-import type { TransactionDetails } from "../services/TransactionAnalysisService";
+import ScanningCamera from "./components/ScanningCamera";
+import NavbarWallet from "./components/NavbarWallet";
+import { useBlockchainService } from "./services/BlockchainService";
+import { useTransactionAnalysis } from "./services/TransactionAnalysisService";
+import type { TransactionDetails } from "./services/TransactionAnalysisService";
 import HeroSection from "./HeroSection";
-import ScanButton from "../components/ScanButton";
-import TransactionVerificationSection from "../services/TransactionVerificationSection";
+import ScanButton from "./components/ScanButton";
+import TransactionVerificationSection from "./services/TransactionVerificationSection";
 
 // Types for product verification
 interface ProductInfo {

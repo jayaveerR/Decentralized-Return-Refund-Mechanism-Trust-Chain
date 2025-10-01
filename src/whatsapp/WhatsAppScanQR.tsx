@@ -6,7 +6,7 @@ import { Camera, Shield, Zap } from 'lucide-react';
 import { Toast } from './components/Toast';
 import { SuccessModal } from './components/SuccessModal';
 import { AnimatedHeroSection } from './components/AnimatedHeroSection';
-import ScanningCamera from '../components/ScanningCamera';
+import ScanningCamera from '../Verifypage/components/ScanningCamera';
 import Navbar from '../components/Navbar';
 
 // Define the toast type

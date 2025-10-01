@@ -7,7 +7,7 @@ import {
   MdWarning,
   MdEdit,
 } from "react-icons/md";
-import ActionEligible from "../components/ActionEligible";
+import ActionEligible from "../services/ActionEligible";
 import type { TransactionDetails } from "../services/TransactionAnalysisService";
 
 interface ProductInfo {
