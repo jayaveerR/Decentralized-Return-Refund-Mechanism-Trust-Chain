@@ -9,4 +9,7 @@ Efficient: Streamlined refund and replacement process across all platforms, redu
 
 ## ScreenShorts
 
+ # Dashboard -
+ ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/28ef56e86dff68e870bcab278df033e948d698ed/Dashboard.png)
+ 
 
