@@ -36,6 +36,9 @@ const MyOrders: React.FC = () => {
   const [transactionHashes, setTransactionHashes] = useState<TransactionHashItem[]>([]);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+  const [showClearConfirmation, setShowClearConfirmation] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [showToast, setShowToast] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,6 +63,15 @@ const MyOrders: React.FC = () => {
       }
     }
   }, []);
+
+  // Show toast message
+  const showToastMessage = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
 
   const checkPetraInstallation = () => {
     setIsPetraInstalled(!!window.aptos);
@@ -93,8 +105,10 @@ const MyOrders: React.FC = () => {
       setWalletAddress(response.address);
       setIsConnected(true);
       loadTransactionHashes(response.address);
+      showToastMessage("Wallet connected successfully!");
     } catch (error: any) {
       console.error("Failed to connect wallet:", error);
+      showToastMessage("Failed to connect wallet");
     } finally {
       setLoading(false);
     }
@@ -107,8 +121,10 @@ const MyOrders: React.FC = () => {
       setWalletAddress("");
       setIsConnected(false);
       setTransactionHashes([]);
+      showToastMessage("Wallet disconnected successfully!");
     } catch (error: any) {
       console.error("Failed to disconnect wallet:", error);
+      showToastMessage("Failed to disconnect wallet");
     } finally {
       setLoading(false);
     }
@@ -152,6 +168,7 @@ const MyOrders: React.FC = () => {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedHash(text);
+    showToastMessage("Transaction hash copied to clipboard!");
     setTimeout(() => setCopiedHash(null), 2000);
   };
 
@@ -205,15 +222,39 @@ const MyOrders: React.FC = () => {
         JSON.stringify(storedHashes)
       );
       setTransactionHashes([]);
+      setShowClearConfirmation(false);
+      showToastMessage("All transaction hashes cleared successfully!");
     } catch (error) {
       console.error("Error clearing transaction hashes:", error);
+      showToastMessage("Failed to clear transaction hashes");
     }
+  };
+
+  const handleClearClick = () => {
+    setShowClearConfirmation(true);
+  };
+
+  const handleCancelClear = () => {
+    setShowClearConfirmation(false);
+    showToastMessage("Clear operation cancelled");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Use the imported Navbar component */}
       <Navbar activeTab="myorders" />
+      
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
       
       <main className="max-w-6xl mx-auto p-6 min-h-screen">
         <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -278,7 +319,7 @@ const MyOrders: React.FC = () => {
                   )}
                 </button>
                 <button
-                  onClick={clearTransactionHashes}
+                  onClick={handleClearClick}
                   className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl transition-colors duration-200 shadow-md"
                 >
                   <svg
@@ -493,6 +534,41 @@ const MyOrders: React.FC = () => {
           )}
         </div>
       </main>
+
+      {/* Clear Confirmation Modal */}
+      {showClearConfirmation && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Clear All Transaction Hashes?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                This action will permanently delete all {transactionHashes.length} transaction hashes for your wallet. This cannot be undone.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={clearTransactionHashes}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl font-semibold transition-all duration-200"
+                >
+                  Yes, Clear All Data
+                </button>
+                <button
+                  onClick={handleCancelClear}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-2xl font-semibold transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showWalletModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

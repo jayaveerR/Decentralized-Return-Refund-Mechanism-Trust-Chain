@@ -1,9 +1,9 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import ItemAddWithPetraClean from "./Itemadding/ItemAddWithPetraClean";
-import Myorders from "./pages/Myorders";
+import Myorders from "./Myorders/Myorders";
 import Verify from "./Verifypage/Verify";
-import Qrcode from "./pages/Qrcode";
+import Qrcode from "./Qrcode/Qrcode";
 import Homepage from "./pages/Homepage";
 
 function App() {
