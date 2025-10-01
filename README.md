@@ -71,6 +71,7 @@ A transaction hash is generated for this match.
 The hash is shared with the product owner (e.g., via WhatsApp) for secure confirmation.
 
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/e8a4e7f3431069d701fe6c8e1e8efb308f270770/images/Success.png)
+![image alt]()
 
 # Faild Transaction Product MisMatch -
 
@@ -86,7 +87,8 @@ Instantly scan QR codes and connect seamlessly through WhatsApp with enhanced se
 
 A transaction hash is then generated and shared with the product owner via WhatsApp for instant verification.
 
-![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/5432c38268f371498f6ff7e3fb010fa939756a75/images/whatsAppSucess.png)
+![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/caba2bb92646c9fcf2914ae0174e48c148530086/images/SendQRWhatsapp.png)
+
 
 
 
