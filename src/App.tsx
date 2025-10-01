@@ -5,6 +5,7 @@ import Myorders from "./Myorders/Myorders";
 import Verify from "./Verifypage/Verify";
 import Qrcode from "./Qrcode/Qrcode";
 import Homepage from "./pages/Homepage";
+import WhatsAppScanQR from "./whatsapp/WhatsAppScanQR";
 
 function App() {
   return (
@@ -16,6 +17,9 @@ function App() {
         <Route path="/myorders" element={<Myorders />} />
         <Route path="/verify" element={<Verify />} />
         <Route path="/qrcode" element={<Qrcode />} />
+       <Route path="/whatsappscanqr" element={<WhatsAppScanQR />} />
+
+        
       </Routes>
     </Router>
   );
