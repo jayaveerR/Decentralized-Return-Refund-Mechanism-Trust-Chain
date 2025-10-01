@@ -89,9 +89,9 @@ A transaction hash is then generated and shared with the product owner via Whats
 
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/caba2bb92646c9fcf2914ae0174e48c148530086/images/SendQRWhatsapp.png)
 
+# ENIVIRONMENT
 
-
-
+### Create a .env from .env.sample and fill the values. Required keys:
 
 
 
