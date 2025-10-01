@@ -93,14 +93,17 @@ A transaction hash is then generated and shared with the product owner via Whats
 
 ### Create a .env from .env.sample and fill the values. Required keys:
 
+```env
 
+# Network used by SDK and wallet adapter
+VITE_APP_NETWORK=testnet
 
+# Publisher account (the address that compiles/publishes the Move package)
+VITE_MODULE_PUBLISHER_ACCOUNT_ADDRESS=0x...
+VITE_MODULE_PUBLISHER_ACCOUNT_PRIVATE_KEY=0x...
 
-
-
-
-
-
+# Deployed module address (auto-written by publish script, or set manually)
+VITE_MODULE_ADDRESS=0xf50e2e1a30a1bfc7301cfb163b22c1ae77251ccd1b8e71ec81f08c32406dabfa
 
 
 
