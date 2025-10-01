@@ -10,6 +10,13 @@ Efficient: Streamlined refund and replacement process across all platforms, redu
 ## ScreenShorts
 
  #### Dashboard -
- ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/28ef56e86dff68e870bcab278df033e948d698ed/Dashboard.png)
+
+ℹ️ This system builds trust between customers and e-commerce platforms, ensuring that refunds and product returns are secure, transparent, and efficient...
+
+ ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/28ef56e86dff68e870bcab278df033e948d698ed/Dashboard.png
+
+ 
+
+ 
  
 
