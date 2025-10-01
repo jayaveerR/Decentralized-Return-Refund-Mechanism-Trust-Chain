@@ -67,7 +67,7 @@ export const useAptosWallet = () => {
       window.aptos!.onDisconnect?.(onDisconnect);
       window.aptos!.onAccountChange?.(onAccountChange);
     } catch (e) {
-      // ignore
+      console.error("Error setting up wallet listeners:", e);
     }
   }, [checkProvider, refreshConnectionState]);
 
@@ -77,21 +77,49 @@ export const useAptosWallet = () => {
       setErrorMsg("Petra wallet not installed. Install from https://petra.app/");
       return;
     }
+    
     setConnecting(true);
     try {
-      const resp = await window.aptos!.connect!();
-      const addr = resp?.address ?? null;
-      setConnected(true);
-      setAddress(addr);
+      // Ensure we're working with the latest provider state
+      await refreshConnectionState();
+      
+      // Check if already connected
+      const isAlreadyConnected = await window.aptos!.isConnected?.();
+      if (isAlreadyConnected) {
+        const account = await window.aptos!.account?.();
+        setConnected(true);
+        setAddress(account?.address || null);
+        return;
+      }
+
+      // Connect to wallet
+      const response = await window.aptos!.connect!();
+      if (response?.address) {
+        setConnected(true);
+        setAddress(response.address);
+        
+        // Store connection in localStorage for persistence
+        localStorage.setItem("walletConnected", "true");
+        localStorage.setItem("walletAddress", response.address);
+      }
     } catch (err: any) {
       console.error("connectWallet error:", err);
-      setErrorMsg(
-        err?.message?.toLowerCase()?.includes("user rejected")
-          ? "Connection rejected by user."
-          : "Failed to connect to wallet."
-      );
-      setConnected(false);
-      setAddress(null);
+      const errorMessage = err?.message || "Unknown error occurred";
+      
+      if (errorMessage.toLowerCase().includes("user rejected")) {
+        setErrorMsg("Connection rejected by user.");
+      } else if (errorMessage.toLowerCase().includes("already connected")) {
+        // If already connected, try to get account info
+        try {
+          const account = await window.aptos!.account?.();
+          setConnected(true);
+          setAddress(account?.address || null);
+        } catch {
+          setErrorMsg("Wallet connection failed. Please try again.");
+        }
+      } else {
+        setErrorMsg(`Failed to connect: ${errorMessage}`);
+      }
     } finally {
       setConnecting(false);
     }
@@ -107,9 +135,18 @@ export const useAptosWallet = () => {
       console.error("Disconnect error:", e);
     }
 
+    // Clear local state and storage
     setConnected(false);
     setAddress(null);
+    localStorage.removeItem("walletConnected");
+    localStorage.removeItem("walletAddress");
   };
+
+  // Mask address for display
+  const maskAddress = useCallback((addr?: string | null) => {
+    if (!addr) return "Not connected";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }, []);
 
   return {
     connected,
@@ -120,5 +157,6 @@ export const useAptosWallet = () => {
     connectWallet,
     disconnectWallet,
     checkProvider,
+    maskAddress, // Added maskAddress function
   };
 };

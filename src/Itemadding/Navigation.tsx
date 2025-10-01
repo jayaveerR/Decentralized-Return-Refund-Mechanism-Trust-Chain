@@ -13,6 +13,8 @@ interface NavigationProps {
   setCopied: (copied: boolean) => void;
   disconnectWallet: () => void;
   maskAddress: (addr?: string | null) => string;
+  connectWallet: () => Promise<void>; // Added connectWallet prop
+  connecting: boolean; // Added connecting state
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -25,6 +27,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   setCopied,
   disconnectWallet,
   maskAddress,
+  connectWallet, // Added connectWallet
+  connecting, // Added connecting state
 }) => {
   const navigate = useNavigate();
 
@@ -43,6 +47,14 @@ export const Navigation: React.FC<NavigationProps> = ({
     navigate("/myorders");
   };
 
+  const handleConnectWallet = async () => {
+    try {
+      await connectWallet();
+    } catch (error) {
+      console.error("Failed to connect wallet:", error);
+    }
+  };
+
   return (
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,9 +66,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             <span className="text-xl font-bold text-gray-900">BlockVerify</span>
           </div>
 
-          <div className="w-20 h-10 hover:bg-yellow-100 cursor-pointer rounded-lg flex items-center justify-center" 
-               onClick={() => navigate('/home')}>
-            {/* Home icon would go here */}
+          <div 
+            className="w-20 h-10 hover:bg-yellow-100 cursor-pointer rounded-lg flex items-center justify-center" 
+            onClick={() => navigate('/home')}
+          >
+            <span className="text-gray-600">Home</span>
           </div>
 
           <div className="hidden md:flex items-center space-x-2">
@@ -136,10 +150,21 @@ export const Navigation: React.FC<NavigationProps> = ({
               </div>
             ) : (
               <button
-                onClick={() => {/* connect wallet handler */}}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors cursor-pointer"
+                onClick={handleConnectWallet}
+                disabled={connecting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                Connect Wallet
+                {connecting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  "Connect Wallet"
+                )}
               </button>
             )}
           </div>

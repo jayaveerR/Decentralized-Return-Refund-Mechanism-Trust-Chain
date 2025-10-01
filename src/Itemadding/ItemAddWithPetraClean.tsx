@@ -28,22 +28,22 @@ export default function ItemAddWithPetraClean() {
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const {
     connected,
     address,
     connecting,
-    errorMsg,
-    setErrorMsg,
     connectWallet,
     disconnectWallet,
     checkProvider,
+    maskAddress,
   } = useAptosWallet();
 
   const { storeTransactionHash, submitToBlockchain } = useTransaction();
   const navigate = useNavigate();
 
-  // Set explorer URL based on network
+  // Set explorer URL
   useEffect(() => {
     const baseUrl =
       NETWORK.toLowerCase() === "mainnet"
@@ -52,12 +52,20 @@ export default function ItemAddWithPetraClean() {
     setExplorerUrl(`${baseUrl}/txn/`);
   }, []);
 
-  // Auto-hide success animation after 5 seconds
+  // Auto-fill owner wallet address
+  useEffect(() => {
+    if (connected && address) {
+      setForm((prev) => ({
+        ...prev,
+        ownerWalletAddress: address,
+      }));
+    }
+  }, [connected, address]);
+
+  // Hide success overlay after 5s
   useEffect(() => {
     if (showSuccess) {
-      const timer = setTimeout(() => {
-        setShowSuccess(false);
-      }, 5000);
+      const timer = setTimeout(() => setShowSuccess(false), 5000);
       return () => clearTimeout(timer);
     }
   }, [showSuccess]);
@@ -67,27 +75,24 @@ export default function ItemAddWithPetraClean() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const maskAddress = (addr?: string | null) => {
-    if (!addr) return "";
-    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
-  };
-
   const validateForm = () => {
     if (!form.productId.trim()) return "Product ID is required";
     if (!form.orderId.trim()) return "Order ID is required";
     if (!form.brand.trim()) return "Brand is required";
-    if (!form.ownerWalletAddress.trim()) return "Owner wallet address is required";
+    if (!form.ownerWalletAddress.trim())
+      return "Owner wallet address is required";
 
     if (
       !form.ownerWalletAddress.startsWith("0x") ||
       form.ownerWalletAddress.length !== 66
     ) {
-      return "Invalid wallet address format";
+      return "Invalid wallet address format. Must start with 0x and be 66 characters long.";
     }
 
     return null;
   };
 
+  // ✅ MAIN submit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -116,10 +121,9 @@ export default function ItemAddWithPetraClean() {
         console.log("Transaction hash stored:", result.hash);
       }
 
-      // Show success animation
       setShowSuccess(true);
 
-      // Reset form after successful submission
+      // Reset form
       setTimeout(() => {
         setForm({
           productId: "",
@@ -128,7 +132,6 @@ export default function ItemAddWithPetraClean() {
           ownerWalletAddress: address || "",
         });
       }, 1000);
-
     } catch (err: any) {
       console.error("Submission error:", err);
       setErrorMsg(
@@ -143,6 +146,20 @@ export default function ItemAddWithPetraClean() {
     }
   };
 
+  // ✅ PayNow handler (separate, not nested!)
+  const handlePayNow = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Pay Now clicked:", form);
+    // You can add custom payment logic here
+  
+    const error = validateForm();
+    if (error) {
+      setErrorMsg(error);
+      return;
+    }
+
+  };
+
   const viewOnExplorer = () => {
     if (transactionHash && explorerUrl) {
       window.open(
@@ -152,14 +169,8 @@ export default function ItemAddWithPetraClean() {
     }
   };
 
-  const navigateToMyOrders = () => {
-    navigate("/myorders");
-  };
-
-  const closeSuccess = () => {
-    setShowSuccess(false);
-  };
-
+  const navigateToMyOrders = () => navigate("/myorders");
+  const closeSuccess = () => setShowSuccess(false);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative">
       {/* Success Animation Overlay */}
@@ -171,22 +182,22 @@ export default function ItemAddWithPetraClean() {
               <div className="relative">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-in zoom-in-95 duration-500">
                   <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
-                    <svg 
-                      className="w-10 h-10 text-white animate-in rotate-in-90 duration-700" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <svg
+                      className="w-10 h-10 text-white animate-in rotate-in-90 duration-700"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={3} 
-                        d="M5 13l4 4L19 7" 
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
                       />
                     </svg>
                   </div>
                 </div>
-                
+
                 {/* Pulsing rings */}
                 <div className="absolute inset-0 border-4 border-green-200 rounded-full animate-ping opacity-75"></div>
                 <div className="absolute inset-0 border-2 border-green-300 rounded-full animate-pulse"></div>
@@ -204,11 +215,13 @@ export default function ItemAddWithPetraClean() {
               <p className="text-gray-600 text-sm animate-in fade-in-0 duration-900">
                 Transaction has been confirmed on {NETWORK} network
               </p>
-              
+
               {/* Transaction Hash */}
               {transactionHash && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg animate-in fade-in-0 duration-1100">
-                  <p className="text-xs text-gray-500 mb-1">Transaction Hash:</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    Transaction Hash:
+                  </p>
                   <p className="font-mono text-xs break-all text-gray-700">
                     {transactionHash}
                   </p>
@@ -245,6 +258,8 @@ export default function ItemAddWithPetraClean() {
         setCopied={setCopied}
         disconnectWallet={disconnectWallet}
         maskAddress={maskAddress}
+        connectWallet={connectWallet}
+        connecting={connecting}
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -254,12 +269,24 @@ export default function ItemAddWithPetraClean() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-green-800 font-medium">Transaction Successful!</p>
+                  <p className="text-green-800 font-medium">
+                    Transaction Successful!
+                  </p>
                   <p className="text-green-600 text-sm mt-1">
                     Item successfully added to blockchain on {NETWORK}
                   </p>
@@ -295,6 +322,7 @@ export default function ItemAddWithPetraClean() {
           submitting={submitting}
           handleChange={handleChange}
           handleSubmit={handleSubmit}
+           handlePayNow={handlePayNow} // ✅ added
         />
       </main>
     </div>

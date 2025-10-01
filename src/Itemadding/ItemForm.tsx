@@ -11,6 +11,7 @@ interface ItemFormProps {
   submitting: boolean;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent) => void;
+  handlePayNow: (e: React.FormEvent) => void; // ✅ required now
 }
 
 export const ItemForm: React.FC<ItemFormProps> = ({
@@ -19,6 +20,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
   submitting,
   handleChange,
   handleSubmit,
+  handlePayNow,
 }) => {
   const MODULE_ADDRESS = import.meta.env.VITE_MODULE_ADDRESS!;
   const NETWORK = import.meta.env.VITE_APP_NETWORK || "Testnet";
@@ -44,6 +46,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Product ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Product ID *
@@ -63,6 +66,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
             />
           </div>
 
+          {/* Order ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Order ID *
@@ -81,6 +85,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
             />
           </div>
 
+          {/* Brand */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Brand *
@@ -99,6 +104,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
             />
           </div>
 
+          {/* Wallet Address */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Owner Wallet Address *
@@ -118,7 +124,9 @@ export const ItemForm: React.FC<ItemFormProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-center pt-4">
+        {/* Buttons */}
+        <div className="flex justify-center space-x-4 pt-4">
+          {/* Add to Blockchain */}
           <button
             type="submit"
             disabled={!connected || submitting}
@@ -133,6 +141,26 @@ export const ItemForm: React.FC<ItemFormProps> = ({
               </>
             ) : (
               <span className="cursor-pointer">Add to Blockchain</span>
+            )}
+          </button>
+
+          {/* Pay Now 0.2 APT */}
+          <button
+            type="button"
+            onClick={handlePayNow}
+            disabled={!connected || submitting}
+            className="px-8 py-3 bg-green-600 text-white rounded-lg font-medium 
+              hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
+              flex items-center space-x-2 min-w-[200px] justify-center"
+          >
+            
+            {submitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Processing Transaction...</span>
+              </>
+            ) : (
+            <span className="cursor-pointer">Pay Now 0.2 APT</span>
             )}
           </button>
         </div>
