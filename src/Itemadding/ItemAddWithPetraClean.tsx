@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAptosWallet } from "./useAptosWallet";
 import { useTransaction } from "./useTransaction";
 import { Navigation } from "./Navigation";
@@ -54,7 +53,6 @@ export default function ItemAddWithPetraClean() {
   } = useAptosWallet();
 
   const { storeTransactionHash, submitToBlockchain } = useTransaction();
-  const navigate = useNavigate();
 
   // Initialize AptTransaction as a hook
   const { sendTransaction } = useAptTransaction({
@@ -232,7 +230,7 @@ export default function ItemAddWithPetraClean() {
     }
   };
 
-  const navigateToMyOrders = () => navigate("/myorders");
+  
   const closeSuccess = () => setShowSuccess(false);
   const closePaymentSuccess = () => {
     console.log("Closing payment success modal");

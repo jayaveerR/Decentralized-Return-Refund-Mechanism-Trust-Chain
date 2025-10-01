@@ -1,7 +1,6 @@
-"use client";
+
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Navbar from '../components/Navbar'; // Import the Navbar component
 
 const TRANSACTION_HASHES_STORAGE_KEY = "blockverify_transaction_hashes";
@@ -30,7 +29,7 @@ interface TransactionHashItem {
 const MyOrders: React.FC = () => {
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [, setLoading] = useState<boolean>(false);
   const [isPetraInstalled, setIsPetraInstalled] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [transactionHashes, setTransactionHashes] = useState<TransactionHashItem[]>([]);
@@ -39,7 +38,6 @@ const MyOrders: React.FC = () => {
   const [showClearConfirmation, setShowClearConfirmation] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>("");
   const [showToast, setShowToast] = useState<boolean>(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     checkPetraInstallation();
@@ -114,21 +112,7 @@ const MyOrders: React.FC = () => {
     }
   };
 
-  const disconnectWallet = async () => {
-    setLoading(true);
-    try {
-      if (window.aptos) await window.aptos.disconnect();
-      setWalletAddress("");
-      setIsConnected(false);
-      setTransactionHashes([]);
-      showToastMessage("Wallet disconnected successfully!");
-    } catch (error: any) {
-      console.error("Failed to disconnect wallet:", error);
-      showToastMessage("Failed to disconnect wallet");
-    } finally {
-      setLoading(false);
-    }
-  };
+  
 
   // Load only transaction hashes from localStorage
   const loadTransactionHashes = (address: string) => {

@@ -1,6 +1,5 @@
-"use client";
+
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import ScanningCamera from "./components/ScanningCamera";
 import NavbarWallet from "./components/NavbarWallet";
@@ -25,7 +24,6 @@ interface ProductInfo {
 }
 
 const Verify = () => {
-  const navigate = useNavigate();
 
   const [isScanning, setIsScanning] = useState(false);
   const [scannedData, setScannedData] = useState<string | null>(null);
@@ -47,7 +45,7 @@ const Verify = () => {
   // Wallet states
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const [isWalletConnecting, setIsWalletConnecting] = useState(false);
+  const [isWalletConnecting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
   // Services with proper toast integration

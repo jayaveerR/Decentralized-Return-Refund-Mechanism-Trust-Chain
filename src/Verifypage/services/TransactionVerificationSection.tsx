@@ -237,7 +237,6 @@ const TransactionDetailsContent = ({
   onUserAddressChange,
   formatTimestamp,
   formatGasUsed,
-  formatFunctionName,
 }: any) => (
   <div className="space-y-6">
     {/* Product Verification Form */}

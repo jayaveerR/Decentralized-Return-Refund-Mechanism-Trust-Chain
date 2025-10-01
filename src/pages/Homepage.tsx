@@ -1,4 +1,4 @@
-"use client";
+
 import { useNavigate } from 'react-router-dom';
 import img from '../assets/decentralized.png';
 import Navbar from '../components/Navbar';
@@ -43,7 +43,7 @@ const Homepage = () => {
           <div className="lg:w-1/2 flex flex-col items-center">
             <img 
               src={img} 
-              alt="Hero Image" 
+              alt="Hero" 
               className="w-full max-w-lg rounded-xl shadow-lg" 
             />
           </div>

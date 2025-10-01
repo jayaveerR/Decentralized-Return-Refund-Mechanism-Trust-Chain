@@ -30,8 +30,7 @@ interface ActionEligibleProps {
 
 const ActionEligible = ({
   productInfo,
-  verificationResult,
-  walletAddress,
+  
   isRecording,
   onRecordMismatch,
   onInitiateReturn,
