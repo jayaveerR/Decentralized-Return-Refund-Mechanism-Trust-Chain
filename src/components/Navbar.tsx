@@ -83,6 +83,8 @@ const Navbar = ({ activeTab = "home" }: NavbarProps) => {
   };
 
   const handleTabClick = (tab: string) => {
+    console.log("Navigating to:", tab);
+    
     if (tab === "home") {
       navigate("/home");
     } else if (tab === "qrcode") {
@@ -109,7 +111,7 @@ const Navbar = ({ activeTab = "home" }: NavbarProps) => {
       if (!target.closest(".wallet-dropdown-container")) {
         setIsDropdownOpen(false);
       }
-      if (!target.closest(".mobile-menu-container")) {
+      if (!target.closest(".mobile-menu-container") && !target.closest(".mobile-menu-button")) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -142,7 +144,7 @@ const Navbar = ({ activeTab = "home" }: NavbarProps) => {
 
   return (
     <>
-      <nav className="flex justify-between items-center p-4 md:p-6 border-b border-gray-100 bg-white sticky top-0 z-40">
+      <nav className="flex justify-between items-center p-4 md:p-6 border-b border-gray-100 bg-white sticky top-0 z-50">
         {/* Logo */}
         <div className="flex items-center">
           <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center mr-2 md:mr-3">
@@ -287,7 +289,7 @@ const Navbar = ({ activeTab = "home" }: NavbarProps) => {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="flex md:hidden items-center space-x-2 mobile-menu-container">
+        <div className="flex md:hidden items-center space-x-2">
           {isWalletConnected && (
             <div className="wallet-dropdown-container">
               <button
@@ -304,7 +306,8 @@ const Navbar = ({ activeTab = "home" }: NavbarProps) => {
           
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200 mobile-menu-button"
+            aria-label="Toggle menu"
           >
             <svg
               className="w-6 h-6 text-gray-600"
@@ -332,10 +335,17 @@ const Navbar = ({ activeTab = "home" }: NavbarProps) => {
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - Fixed Structure */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden pt-16">
-          <div className="bg-white h-full overflow-y-auto">
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop - Click to close */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Menu Panel */}
+          <div className="absolute top-16 right-0 bottom-0 left-0 bg-white overflow-y-auto mobile-menu-container">
             <div className="p-6 space-y-6">
               {/* Navigation Tabs */}
               <div className="space-y-4">
