@@ -177,6 +177,13 @@ npm run build
 * Buyers get transparent return verification.
 * The system ensures trust, security, and accountability in e-commerce returns.
 
+📝 Note
+  * Every product registered in this system is linked with a unique Order ID, Product ID, Brand, and Seller Wallet Address stored on the blockchain
+  * The QR code attached to the product acts as a digital authenticity tag.
+  * Do not remove or damage the QR code. If the tag is missing or tampered with, the return and refund request will not be accepted.
+  * During a return, the delivery agent must scan the QR code to verify details.
+  * Return is only successful if the scanned details match the blockchain record. Otherwise, the system will reject the return automatically.
+  * All transactions and verifications generate immutable blockchain records, ensuring security, trust, and transparency for both buyers and sellers.
 
 
 
