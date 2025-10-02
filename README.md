@@ -133,49 +133,50 @@ npm run build
 ### 🔹 How the System Works
 
 ### 1.Order Placement
- #### . A buyer orders a product from an online platform (Flipkart, Amazon, Myntra, etc.).
-#### .The platform generates a unique Order ID for that purchase.
+  * A buyer orders a product from an online platform (Flipkart, Amazon, Myntra, etc.).
+  * The platform generates a unique Order ID for that purchase.
 
 ### 2.Seller Registration
-#### .Once the order is confirmed, the seller registers the product on the decentralized system.
-#### .Details stored on blockchain include:
-##### .Product ID
-##### .Order ID (unique to the buyer)
-##### .Brand Name
-##### .Seller’s Wallet Address
-### .A Transaction Hash is generated after successful registration.
+   * Once the order is confirmed, the seller registers the product on the decentralized system.
+   * Details stored on blockchain include:
+       * Product ID
+       * Order ID (unique to the buyer)
+       * Brand Name
+       * Seller’s Wallet Address
+  * A Transaction Hash is generated after successful registration.
 
 ## 3.QR Code Creation
-#### .The Transaction Hash is converted into a QR Code.
-### .This QR Code is:
-####.Printed and attached to the product (like a digital authenticity tag).
-#### .Shared with the buyer via WhatsApp/email for reference.
-#### .A warning message is displayed:
-`“Do not remove this QR tag. If removed, return & refund will not be accepted.”`
+* The Transaction Hash is converted into a QR Code
+* This QR Code is:
+    * Printed and attached to the product (like a digital authenticity tag).
+    * Shared with the buyer via WhatsApp/email for reference.
+* A warning message is displayed:
+  * “Do not remove this QR tag. If removed, return & refund will not be accepted.”
 
 ### 4.Delivery
-#### .The product is delivered to the buyer with the QR code attached.
-#### .The QR code ensures that the product is authentic and traceable.
+ * The product is delivered to the buyer with the QR code attached.
+ * The QR code ensures that the product is authentic and traceable.
 
 ### 5.Return Process
-### .If the buyer wants to return the product, the delivery boy scans the QR code.
-### .The system checks the blockchain record to verify the product details.
+* If the buyer wants to return the product, the delivery boy scans the QR code.
+* The system checks the blockchain record to verify the product details.
 
 ### 6.Verification Results
-#### ✅ Product Match (Success) → If details match the blockchain record, return is accepted.
-###### .Message: “Product Verification Success”
-#### ❌ Product Mismatch (Failed) → If details do not match, return is rejected.
-##### Message: “Return Initiated – Product Mismatch”
+* ✅ Product Match (Success) → If details match the blockchain record, return is accepted.
+   * Message: “Product Verification Success”
+* ❌ Product Mismatch (Failed) → If details do not match, return is rejected.
+   * Message: “Return Initiated – Product Mismatch”
 
 ## 7.Proof & Transparency
-#### .Each scan generates a new verification hash.
-#### .This hash is sent to the seller via WhatsApp, providing proof of the product’s authenticity or mismatch.
-#### .Both seller and buyer have a tamper-proof blockchain record of the transaction.
+* Each scan generates a new verification hash.
+* This hash is sent to the seller via WhatsApp, providing proof of the product’s authenticity or mismatch.
+* Both seller and buyer have a tamper-proof blockchain record of the transaction.
 
 ## ⚡ End Result:
-#### .Sellers are protected from fake returns.
-#### .Buyers get transparent return verification.
-#### .The system ensures trust, security, and accountability in e-commerce returns.
+* Sellers are protected from fake returns.
+* Buyers get transparent return verification.
+* The system ensures trust, security, and accountability in e-commerce returns.
+
 
 
 
