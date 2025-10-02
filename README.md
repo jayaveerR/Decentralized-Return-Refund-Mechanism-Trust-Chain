@@ -71,9 +71,8 @@ A transaction hash is generated for this match.
 The hash is shared with the product owner (e.g., via WhatsApp) for secure confirmation.
 
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/e8a4e7f3431069d701fe6c8e1e8efb308f270770/images/Success.png)
-![image alt]()
 
-# Faild Transaction Product MisMatch -
+# Failed Transaction Product MisMatch -
 
 When the returned product does not match the original purchase:
 The system records a failed verification on the blockchain.
@@ -100,6 +99,10 @@ PROJECT_NAME=decentralized-product-return-trust-chain
 VITE_APTOS_API_KEY=""
 VITE_MODULE_ADDRESS=0xfa1c12cc2e127047b02bc951d71d376cf25b9db220d213bfa972f45c0c55de38
 NFT_STORAGE_KEY=9b58937b.75c14a8de6354943a99c8288f6c86574
+
+
+
+
 
 
 
