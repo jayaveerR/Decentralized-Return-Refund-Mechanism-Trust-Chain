@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Decentralized Return & Refund Trust Chain -  
 
  A blockchain-powered solution for fraud-proof product returns and refunds in e-commerce.
@@ -295,7 +295,3 @@ npm run build
 
 
 
-
-
-
->>>>>>> c6ba5158aaa132e4d9617c3e1c6642aa37351e97
