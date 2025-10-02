@@ -90,7 +90,7 @@ A transaction hash is then generated and shared with the product owner via Whats
 
 # ENIVIRONMENT
 
-### Create a .env from .env.sample and fill the values. Required keys:
+### Create a  `.env` from `.env.sample` and fill the values. Required keys:
 
 ```env
 
@@ -99,9 +99,83 @@ PROJECT_NAME=decentralized-product-return-trust-chain
 VITE_APTOS_API_KEY=""
 VITE_MODULE_ADDRESS=0xfa1c12cc2e127047b02bc951d71d376cf25b9db220d213bfa972f45c0c55de38
 NFT_STORAGE_KEY=9b58937b.75c14a8de6354943a99c8288f6c86574
+```
+The Move module name is product. Frontend derives fully-qualified function names from VITE_MODULE_ADDRESS.
 
+# 🚀 How to Run the Project
 
+### 1. Clone the Repository
+```bash
+git clone https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai.git
+cd Decentralized-Return-RefundMechanism-Trust-Chai
+```
+### 2. Install Dependencies
+##### Make sure you have Node.js and npm installed. Then run:
+```
+npm install
+```
+### 3. Setup Environment Variables
+#### Copy the sample `.env` file:
+```
+cp .env.sample .env
+```
+### 4. Run the Development Server
+```
+npm run dev
+```
+Then open the URL shown in the terminal (usually http://localhost:5173
+)
+#### 5. Build for Production (optional)
+```
+npm run build
+```
 
+### 🔹 How the System Works
+
+### 1.Order Placement
+ #### . A buyer orders a product from an online platform (Flipkart, Amazon, Myntra, etc.).
+#### .The platform generates a unique Order ID for that purchase.
+
+### 2.Seller Registration
+#### .Once the order is confirmed, the seller registers the product on the decentralized system.
+#### .Details stored on blockchain include:
+##### .Product ID
+##### .Order ID (unique to the buyer)
+##### .Brand Name
+##### .Seller’s Wallet Address
+### .A Transaction Hash is generated after successful registration.
+
+## 3.QR Code Creation
+#### .The Transaction Hash is converted into a QR Code.
+### .This QR Code is:
+####.Printed and attached to the product (like a digital authenticity tag).
+#### .Shared with the buyer via WhatsApp/email for reference.
+#### .A warning message is displayed:
+`“Do not remove this QR tag. If removed, return & refund will not be accepted.”`
+
+### 4.Delivery
+#### .The product is delivered to the buyer with the QR code attached.
+#### .The QR code ensures that the product is authentic and traceable.
+
+### 5.Return Process
+### .If the buyer wants to return the product, the delivery boy scans the QR code.
+### .The system checks the blockchain record to verify the product details.
+
+### 6.Verification Results
+#### ✅ Product Match (Success) → If details match the blockchain record, return is accepted.
+###### .Message: “Product Verification Success”
+#### ❌ Product Mismatch (Failed) → If details do not match, return is rejected.
+##### Message: “Return Initiated – Product Mismatch”
+
+## 7.Proof & Transparency
+#### .Each scan generates a new verification hash.
+#### .This hash is sent to the seller via WhatsApp, providing proof of the product’s authenticity or mismatch.
+#### .Both seller and buyer have a tamper-proof blockchain record of the transaction.
+
+## ⚡ End Result:
+#### .Sellers are protected from fake returns.
+#### .Buyers get transparent return verification.
+#### .The system ensures trust, security, and accountability in e-commerce returns.
 
 
 
