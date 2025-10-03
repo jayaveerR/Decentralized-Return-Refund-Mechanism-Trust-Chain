@@ -75,9 +75,9 @@ The hash is shared with the product owner (e.g., via WhatsApp) for secure confir
 
 # Failed Transaction Product MisMatch -
 
-When the returned product does not match the original purchase:
-The system records a failed verification on the blockchain.
-A transaction hash is generated for this mismatch.
+   * When the returned product does not match the original purchase:
+    The system records a failed verification on the blockchain.
+    A transaction hash is generated for this mismatch.)
 
 
 ![image alt](https://github.com/jayaveerR/Decentralized-Return-RefundMechanism-Trust-Chai/blob/e8a4e7f3431069d701fe6c8e1e8efb308f270770/images/Failed.png)
@@ -177,6 +177,20 @@ npm run build
 * Sellers are protected from fake returns.
 * Buyers get transparent return verification.
 * The system ensures trust, security, and accountability in e-commerce returns.
+
+## 🔹 Abstraction
+ * In this project, abstraction means hiding blockchain complexity from normal users (seller, buyer, delivery boy) and showing only simple, easy-to-use actions.
+   Seller View: Seller only registers product details (Order ID, Product ID, Brand, Wallet Address) in the app. They don’t see the raw blockchain code or smart contract functions — the system abstracts it and       stores everything securely on-chain.
+     * Buyer View: Buyer just sees a QR code attached to the product. They don’t need to know about transaction hashes or blockchain storage. The QR is an abstraction of blockchain proof.
+     * Delivery Boy View: During return, the delivery boy simply scans the QR code. The app shows either:
+     * ✅ Product Verification Success (match found)
+* ❌ Return Initiated – Product Mismatch
+    * He doesn’t deal with blockchain hash values or smart contract execution.
+    * System Layer: In the background, the system handles:
+    * Generating transaction hashes
+    * Storing details on the blockchain
+    * Sending proof via WhatsApp
+
 
 📝 Note
   * Every product registered in this system is linked with a unique Order ID, Product ID, Brand, and Seller Wallet Address stored on the blockchain
