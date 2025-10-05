@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle, ExternalLink, QrCode } from 'lucide-react';
+import { X, CheckCircle, Copy, QrCode } from 'lucide-react';
 
 interface SuccessModalProps {
   isOpen: boolean;
@@ -9,49 +9,33 @@ interface SuccessModalProps {
 }
 
 export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrData }) => {
-  const openWhatsApp = () => {
-    let phoneNumber = '';
-    
-    // Extract phone number from various formats
-    if (/^\d+$/.test(qrData)) {
-      phoneNumber = qrData;
-    } 
-    else if (qrData.includes('wa.me')) {
-      const match = qrData.match(/wa\.me\/(\d+)/);
-      phoneNumber = match ? match[1] : qrData.replace(/\D/g, '');
-    }
-    else if (qrData.includes('whatsapp.com')) {
-      const match = qrData.match(/whatsapp\.com\/.*?(\d+)/);
-      phoneNumber = match ? match[1] : qrData.replace(/\D/g, '');
-    }
-    else {
-      phoneNumber = qrData.replace(/\D/g, '');
-    }
-    
-    // Remove any leading zeros and ensure proper format
-    phoneNumber = phoneNumber.replace(/^0+/, '');
-    
-    // Create WhatsApp deep link - this will try to open the native app directly
-    const whatsappDeepLink = `whatsapp://send?phone=${phoneNumber}`;
-    
-    // Try to open WhatsApp app directly
-    window.location.href = whatsappDeepLink;
-    
-    // Fallback: If native app doesn't open, redirect to web after a delay
-    setTimeout(() => {
-      // Check if we're still on the same page (meaning native app didn't open)
-      if (!document.hidden) {
-        const webUrl = `https://wa.me/${phoneNumber}`;
-        window.open(webUrl, '_blank');
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(qrData);
+      
+      // Create and show a temporary success indicator
+      const copyBtn = document.querySelector('.copy-button');
+      if (copyBtn) {
+        const originalHtml = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<span class="flex items-center justify-center space-x-2"><CheckCircle className="w-4 h-4" /><span>Copied!</span></span>';
+        
+        setTimeout(() => {
+          copyBtn.innerHTML = originalHtml;
+        }, 2000);
       }
-    }, 500);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = qrData;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
   };
 
   const extractDisplayData = (data: string) => {
-    if (data.includes('wa.me')) {
-      const match = data.match(/wa\.me\/(\d+)/);
-      return match ? `+${match[1]}` : data;
-    }
     return data.length > 30 ? `${data.substring(0, 30)}...` : data;
   };
 
@@ -104,7 +88,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrD
                 transition={{ delay: 0.4 }}
                 className="text-gray-600 mb-6"
               >
-                Opening WhatsApp directly...
+                Scanned data has been captured and ready to copy
               </motion.p>
 
               <motion.div
@@ -132,14 +116,14 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrD
                   onClick={onClose}
                   className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium hover:border-gray-400 active:scale-95"
                 >
-                  Cancel
+                  Close
                 </button>
                 <button
-                  onClick={openWhatsApp}
-                  className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-medium flex items-center justify-center space-x-2 hover:shadow-lg active:scale-95"
+                  onClick={copyToClipboard}
+                  className="copy-button flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium flex items-center justify-center space-x-2 hover:shadow-lg active:scale-95"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Open WhatsApp</span>
+                  <Copy className="w-4 h-4" />
+                  <span>Copy URL</span>
                 </button>
               </motion.div>
 
@@ -150,7 +134,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrD
                 transition={{ delay: 0.8 }}
                 className="text-xs text-gray-500 mt-4"
               >
-                This will try to open WhatsApp app directly on your device
+                Click "Copy URL" to copy the scanned data to clipboard
               </motion.p>
             </div>
           </motion.div>
