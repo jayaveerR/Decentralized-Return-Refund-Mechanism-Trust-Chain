@@ -10,22 +10,41 @@ interface SuccessModalProps {
 
 export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrData }) => {
   const openWhatsApp = () => {
-    let whatsappUrl = qrData;
+    let phoneNumber = '';
     
+    // Extract phone number from various formats
     if (/^\d+$/.test(qrData)) {
-      whatsappUrl = `https://wa.me/${qrData}`;
+      phoneNumber = qrData;
     } 
-    else if (qrData.includes('wa.me') || qrData.includes('whatsapp.com')) {
-      whatsappUrl = qrData;
+    else if (qrData.includes('wa.me')) {
+      const match = qrData.match(/wa\.me\/(\d+)/);
+      phoneNumber = match ? match[1] : qrData.replace(/\D/g, '');
     }
-    else if (qrData.startsWith('http')) {
-      whatsappUrl = qrData;
+    else if (qrData.includes('whatsapp.com')) {
+      const match = qrData.match(/whatsapp\.com\/.*?(\d+)/);
+      phoneNumber = match ? match[1] : qrData.replace(/\D/g, '');
     }
     else {
-      whatsappUrl = `https://wa.me/${qrData.replace(/\D/g, '')}`;
+      phoneNumber = qrData.replace(/\D/g, '');
     }
     
-    window.open(whatsappUrl, '_blank');
+    // Remove any leading zeros and ensure proper format
+    phoneNumber = phoneNumber.replace(/^0+/, '');
+    
+    // Create WhatsApp deep link - this will try to open the native app directly
+    const whatsappDeepLink = `whatsapp://send?phone=${phoneNumber}`;
+    
+    // Try to open WhatsApp app directly
+    window.location.href = whatsappDeepLink;
+    
+    // Fallback: If native app doesn't open, redirect to web after a delay
+    setTimeout(() => {
+      // Check if we're still on the same page (meaning native app didn't open)
+      if (!document.hidden) {
+        const webUrl = `https://wa.me/${phoneNumber}`;
+        window.open(webUrl, '_blank');
+      }
+    }, 500);
   };
 
   const extractDisplayData = (data: string) => {
@@ -85,7 +104,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrD
                 transition={{ delay: 0.4 }}
                 className="text-gray-600 mb-6"
               >
-                Ready to connect on WhatsApp
+                Opening WhatsApp directly...
               </motion.p>
 
               <motion.div
@@ -123,6 +142,16 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, qrD
                   <span>Open WhatsApp</span>
                 </button>
               </motion.div>
+
+              {/* Additional info for users */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="text-xs text-gray-500 mt-4"
+              >
+                This will try to open WhatsApp app directly on your device
+              </motion.p>
             </div>
           </motion.div>
         </motion.div>

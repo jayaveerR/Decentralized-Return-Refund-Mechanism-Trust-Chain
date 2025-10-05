@@ -18,7 +18,7 @@ module ProductVerification::ProductVerification {
 
     // Event emitted when verification is recorded
     #[event]
-    struct VerificationRecordedEvent has drop, store {
+     struct VerificationRecordedEvent has drop, store {
         verifier: address,
         product_id: String,
         brand_name: String,

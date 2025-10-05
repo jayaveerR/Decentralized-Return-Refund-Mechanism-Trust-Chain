@@ -230,7 +230,6 @@ export default function ItemAddWithPetraClean() {
     }
   };
 
-  
   const closeSuccess = () => setShowSuccess(false);
   const closePaymentSuccess = () => {
     console.log("Closing payment success modal");

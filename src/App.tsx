@@ -6,7 +6,6 @@ import Verify from "./Verifypage/Verify";
 import Qrcode from "./Qrcode/Qrcode";
 import Homepage from "./pages/Homepage";
 import WhatsAppScanQR from "./whatsapp/WhatsAppScanQR";
-
 function App() {
   return (
     <Router>
