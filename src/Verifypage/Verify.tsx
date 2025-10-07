@@ -303,6 +303,14 @@ const Verify = () => {
     }
   };
 
+  const handleBrandNameChange = (value: string) => {
+    if (/^[A-Za-z\s]*$/.test(value)) {
+      setBrandName(value);
+    } else {
+      toast.error("Only letters and spaces are allowed for Brand Name.");
+    }
+  };
+
   const handleScanClick = () => {
     setIsScanning(true);
     setScannedData(null);
@@ -486,7 +494,7 @@ const Verify = () => {
           onInitiateReturn={initiateReturnProcess}
           onInitiateRefund={initiateRefundProcess}
           onResetScan={resetScan}
-          onBrandNameChange={setBrandName}
+          onBrandNameChange={handleBrandNameChange}
           onProductIdChange={setProductId}
           onUserAddressChange={setUserAddress}
           formatTimestamp={formatTimestamp}

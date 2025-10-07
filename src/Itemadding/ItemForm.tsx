@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 interface ItemFormProps {
   form: {
@@ -12,8 +12,44 @@ interface ItemFormProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent) => void;
   handlePayNow: (e: React.FormEvent) => void;
-  paymentCompleted?: boolean; // Add this
+  paymentCompleted?: boolean;
 }
+
+// Brand input component
+export const BrandInput: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}> = ({ value, onChange, disabled = false }) => {
+  const [error, setError] = useState("");
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    if (/^[A-Za-z\s]*$/.test(input)) {
+      onChange(input);
+      setError("");
+    } else {
+      setError("Only letters are allowed for Brand");
+    }
+  };
+
+  return (
+    <>
+      <input
+        type="text"
+        value={value}
+        onChange={handleInputChange}
+        disabled={disabled}
+        placeholder="Enter Item Brand"
+        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+          error ? "border-red-500" : "border-gray-300"
+        }`}
+        required
+      />
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+    </>
+  );
+};
 
 export const ItemForm: React.FC<ItemFormProps> = ({
   form,
@@ -22,10 +58,12 @@ export const ItemForm: React.FC<ItemFormProps> = ({
   handleChange,
   handleSubmit,
   handlePayNow,
-  paymentCompleted = false, // Add default value
+  paymentCompleted = false,
 }) => {
   const MODULE_ADDRESS = import.meta.env.VITE_MODULE_ADDRESS!;
   const NETWORK = import.meta.env.VITE_APP_NETWORK || "Testnet";
+
+  const [orderError, setOrderError] = useState("");
 
   const maskAddress = (addr?: string) => {
     if (!addr) return "";
@@ -39,8 +77,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
           Add Item to Trust-Chain
         </h1>
         <p className="text-gray-600">
-          Register your product on the {NETWORK} blockchain for authenticity
-          tracking
+          Register your product on the {NETWORK} blockchain for authenticity tracking
         </p>
         <div className="mt-2 text-sm text-gray-500">
           Module: {maskAddress(MODULE_ADDRESS)}
@@ -61,9 +98,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
               onChange={handleChange}
               required
               disabled={!connected || submitting}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="Unique product identifier"
               autoComplete="off"
             />
@@ -78,14 +113,23 @@ export const ItemForm: React.FC<ItemFormProps> = ({
               type="text"
               name="orderId"
               value={form.orderId}
-              onChange={handleChange}
+              onChange={(e) => {
+                const input = e.target.value;
+                if (/^[A-Za-z0-9-]*$/.test(input)) {
+                  handleChange(e);
+                  setOrderError("");
+                } else {
+                  setOrderError("Only letters, numbers, and hyphens are allowed");
+                }
+              }}
               required
               disabled={!connected || submitting}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="Order identification number"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                orderError ? "border-red-500" : "border-gray-300"
+              }`}
             />
+            {orderError && <p className="text-red-500 text-sm mt-1">{orderError}</p>}
           </div>
 
           {/* Brand */}
@@ -93,17 +137,14 @@ export const ItemForm: React.FC<ItemFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Brand *
             </label>
-            <input
-              type="text"
-              name="brand"
+            <BrandInput
               value={form.brand}
-              onChange={handleChange}
-              required
+              onChange={(value) =>
+                handleChange({
+                  target: { name: "brand", value },
+                } as React.ChangeEvent<HTMLInputElement>)
+              }
               disabled={!connected || submitting}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="Enter Item Brand"
             />
           </div>
 
@@ -119,9 +160,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
               onChange={handleChange}
               required
               disabled={!connected || submitting}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="Enter wallet address (0x...)"
             />
           </div>
@@ -129,14 +168,12 @@ export const ItemForm: React.FC<ItemFormProps> = ({
 
         {/* Buttons */}
         <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 pt-4">
-          {/* Pay Now 0.2 APT - Always visible */}
+          {/* Pay Now 0.2 APT */}
           <button
             type="button"
             onClick={handlePayNow}
             disabled={!connected || submitting || paymentCompleted}
-            className="px-8 py-3 bg-green-600 text-white rounded-lg font-medium 
-              hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
-              flex items-center space-x-2 min-w-[200px] justify-center"
+            className="px-8 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 min-w-[200px] justify-center"
           >
             {submitting ? (
               <>
@@ -165,13 +202,11 @@ export const ItemForm: React.FC<ItemFormProps> = ({
             )}
           </button>
 
-          {/* Add to Blockchain - Enabled after payment */}
+          {/* Add to Blockchain */}
           <button
             type="submit"
             disabled={!connected || submitting || !paymentCompleted}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium 
-              hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed
-              flex items-center space-x-2 min-w-[200px] justify-center"
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 min-w-[200px] justify-center"
           >
             {submitting ? (
               <>
